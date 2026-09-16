@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,6 +22,9 @@ import com.example.moon.ui.components.MoonVisualization
 fun MoonDetailScreen(
     moonData: MoonData?,
     onBack: () -> Unit,
+    isWallpaperScheduled: Boolean = false,
+    onToggleWallpaperSchedule: (Boolean) -> Unit = {},
+    onUpdateWallpaperNow: () -> Unit = {},
     modifier: Modifier = Modifier,
     locationData: LocationData = LocationData(latitude = 51.5074, longitude = -0.1278)
 ) {
@@ -96,7 +100,7 @@ fun MoonDetailScreen(
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     DetailItem("Phase", moonData.phase.description)
                     DetailItem("Illumination", "${(moonData.illumination * 100).toInt()}%")
-                    DetailItem("Age", "${"%.1f".format(moonData.age)} days")
+                    DetailItem("Age", "${formatOneDecimal(moonData.age)} days")
                     
                     moonData.riseTime?.let {
                         val timeStr = "${it.hour.toString().padStart(2, '0')}:${it.minute.toString().padStart(2, '0')}"
@@ -108,11 +112,64 @@ fun MoonDetailScreen(
                     }
                     
                     moonData.altitude?.let {
-                        DetailItem("Altitude", "${"%.1f".format(it)}°")
+                        DetailItem("Altitude", "${formatOneDecimal(it)}°")
                     }
                     moonData.azimuth?.let {
-                        DetailItem("Azimuth", "${"%.1f".format(it)}°")
+                        DetailItem("Azimuth", "${formatOneDecimal(it)}°")
                     }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    // Wallpaper Settings
+                    Text(
+                        text = "Wallpaper Settings",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Dynamic Wallpaper", style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                                    Text(
+                                        "Automatically update your background to match the moon phase.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.Gray
+                                    )
+                                }
+                                Switch(
+                                    checked = isWallpaperScheduled,
+                                    onCheckedChange = onToggleWallpaperSchedule
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Button(
+                                onClick = onUpdateWallpaperNow,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White.copy(alpha = 0.1f),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Icon(Icons.Rounded.Wallpaper, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Update Wallpaper Now")
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
             } else {
                 Text(
@@ -123,6 +180,12 @@ fun MoonDetailScreen(
             }
         }
     }
+}
+
+private fun formatOneDecimal(v: Double): String {
+    val rounded = kotlin.math.round(v * 10) / 10.0
+    val s = rounded.toString()
+    return if (s.contains('.')) s else "$s.0"
 }
 
 @Composable

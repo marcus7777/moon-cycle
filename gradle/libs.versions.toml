@@ -22,6 +22,7 @@ adaptiveNavigation3 = "1.3.0-rc01"
 lifecycleViewmodelNavigation3 = "2.11.0"
 datastorePreferences = "1.3.0-alpha10"
 coreSplashscreen = "1.0.1"
+workRuntimeKtx = "2.9.1"
 roomRuntime = "2.7.0"
 roomKtx = "2.7.0"
 roomCompiler = "2.7.0"
@@ -100,6 +101,7 @@ moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-code
 androidx-datastore-preferences-impl = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 androidx-datastore-preferences-core = { group = "androidx.datastore", name = "datastore-preferences-core", version.ref = "datastorePreferences" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 commons-suncalc = { group = "org.shredzone.commons", name = "commons-suncalc", version.ref = "commonsSuncalc" }

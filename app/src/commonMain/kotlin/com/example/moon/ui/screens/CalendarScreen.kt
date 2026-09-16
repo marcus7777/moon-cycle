@@ -2,6 +2,7 @@ package com.example.moon.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,16 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.moon.domain.model.EventType
-import com.example.moon.domain.model.LocationData
-import com.example.moon.domain.model.LunarEvent
-import com.example.moon.domain.model.MoonData
-import com.example.moon.domain.model.MoonPhase
-import com.example.moon.domain.model.formatEventName
+import com.example.moon.domain.model.*
+import com.example.moon.domain.repository.NoteRepository
 import com.example.moon.ui.CalendarViewModel
 import com.example.moon.ui.components.MoonVisualization
 import kotlinx.datetime.Clock
@@ -40,81 +38,141 @@ import kotlinx.datetime.toInstant
 @Composable
 fun CalendarScreen(
     locationData: LocationData,
+    noteRepository: NoteRepository? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val viewModel: CalendarViewModel = viewModel()
+    val viewModel: CalendarViewModel = viewModel {
+        CalendarViewModel(noteRepository)
+    }
     val uiState by viewModel.uiState.collectAsState()
     
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     var selectedDate by remember { mutableStateOf(today) }
+    var hasSwipedInThisGesture by remember { mutableStateOf(false) }
     
     LaunchedEffect(uiState.selectedYear, uiState.selectedMonth, locationData) {
         viewModel.loadEvents(uiState.selectedYear, uiState.selectedMonth, locationData)
     }
     
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragStart = { hasSwipedInThisGesture = false },
+                    onHorizontalDrag = { change, dragAmount ->
+                        if (!hasSwipedInThisGesture && dragAmount > 20) { // Swipe right to go back
+                            hasSwipedInThisGesture = true
+                            onBack()
+                        }
+                        change.consume()
+                    }
+                )
+            },
         containerColor = Color.Black,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize()
-                .statusBarsPadding()
+                .fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
+            val isLandscape = maxWidth > maxHeight
+            val contentModifier = if (isLandscape) {
+                Modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth(0.85f)
+                    .fillMaxHeight(0.92f)
+                    .background(Color.White.copy(alpha = 0.05f), MaterialTheme.shapes.large)
+                    .clip(MaterialTheme.shapes.large)
+            } else {
+                Modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth(0.95f)
+                    .fillMaxHeight(0.92f)
+                    .background(Color.White.copy(alpha = 0.05f), MaterialTheme.shapes.large)
+                    .clip(MaterialTheme.shapes.large)
+            }
+
+            Column(
+                modifier = contentModifier.statusBarsPadding()
+            ) {
+                // Remove the title/back bar entirely as per user request to use swiping
+                
+                if (isLandscape) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        EventList(
+                            selectedDate = selectedDate,
+                            events = uiState.events,
+                            notes = uiState.notes,
+                            onSaveNote = { date, note -> viewModel.saveNote(date, note) },
+                            locationData = locationData,
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        VerticalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                        Column(modifier = Modifier.weight(1.2f)) {
+                            MonthHeader(
+                                year = uiState.selectedYear,
+                                month = uiState.selectedMonth,
+                                onPreviousMonth = {
+                                    viewModel.previousMonth(locationData)
+                                },
+                                onNextMonth = {
+                                    viewModel.nextMonth(locationData)
+                                }
+                            )
+                            
+                            CalendarGrid(
+                                year = uiState.selectedYear,
+                                month = uiState.selectedMonth,
+                                events = uiState.events,
+                                dailyMoonData = uiState.dailyMoonData,
+                                notes = uiState.notes,
+                                selectedDate = selectedDate,
+                                onDateSelected = { selectedDate = it },
+                                locationData = locationData
+                            )
+                        }
+                    }
+                } else {
+                    MonthHeader(
+                        year = uiState.selectedYear,
+                        month = uiState.selectedMonth,
+                        onPreviousMonth = {
+                            viewModel.previousMonth(locationData)
+                        },
+                        onNextMonth = {
+                            viewModel.nextMonth(locationData)
+                        }
+                    )
+                    
+                    CalendarGrid(
+                        year = uiState.selectedYear,
+                        month = uiState.selectedMonth,
+                        events = uiState.events,
+                        dailyMoonData = uiState.dailyMoonData,
+                        notes = uiState.notes,
+                        selectedDate = selectedDate,
+                        onDateSelected = { selectedDate = it },
+                        locationData = locationData
+                    )
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.2f))
+                    
+                    EventList(
+                        selectedDate = selectedDate,
+                        events = uiState.events,
+                        notes = uiState.notes,
+                        onSaveNote = { date, note -> viewModel.saveNote(date, note) },
+                        locationData = locationData,
+                        modifier = Modifier.weight(1f)
                     )
                 }
-                
-                Text(
-                    text = "Lunar Calendar",
-                    modifier = Modifier.align(Alignment.Center),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
-                )
             }
-            
-            MonthHeader(
-                year = uiState.selectedYear,
-                month = uiState.selectedMonth,
-                onPreviousMonth = {
-                    viewModel.previousMonth(locationData)
-                },
-                onNextMonth = {
-                    viewModel.nextMonth(locationData)
-                }
-            )
-            
-            CalendarGrid(
-                year = uiState.selectedYear,
-                month = uiState.selectedMonth,
-                events = uiState.events,
-                dailyMoonData = uiState.dailyMoonData,
-                selectedDate = selectedDate,
-                onDateSelected = { selectedDate = it },
-                locationData = locationData
-            )
-            
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.2f))
-            
-            EventList(
-                selectedDate = selectedDate,
-                events = uiState.events,
-                locationData = locationData,
-                modifier = Modifier.weight(1f)
-            )
         }
     }
 }
@@ -131,22 +189,22 @@ fun MonthHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPreviousMonth) {
+        IconButton(onClick = onPreviousMonth, modifier = Modifier.size(32.dp)) {
             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Previous Month", tint = Color.White)
         }
         
         Text(
             text = "$monthName $year",
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
         
-        IconButton(onClick = onNextMonth) {
+        IconButton(onClick = onNextMonth, modifier = Modifier.size(32.dp)) {
             Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "Next Month", tint = Color.White)
         }
     }
@@ -158,6 +216,7 @@ fun CalendarGrid(
     month: Int,
     events: List<LunarEvent>,
     dailyMoonData: Map<LocalDate, MoonData>,
+    notes: Map<LocalDate, String>,
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit,
     locationData: LocationData
@@ -188,7 +247,7 @@ fun CalendarGrid(
             }
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         
         for (row in 0 until rows) {
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -207,6 +266,7 @@ fun CalendarGrid(
                                 isSelected = isSelected,
                                 events = dayEvents,
                                 moonData = moonData,
+                                hasNote = notes.containsKey(date),
                                 onDateSelected = { onDateSelected(date) },
                                 locationData = locationData
                             )
@@ -226,6 +286,7 @@ fun DayCell(
     isSelected: Boolean,
     events: List<LunarEvent>,
     moonData: MoonData?,
+    hasNote: Boolean,
     onDateSelected: () -> Unit,
     locationData: LocationData
 ) {
@@ -238,16 +299,27 @@ fun DayCell(
             .clickable { onDateSelected() },
         contentAlignment = Alignment.Center
     ) {
+        if (hasNote) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(Color.Yellow)
+            )
+        }
+        
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
                 text = day.toString(),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = if (isSelected) Color.Black else Color.White,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )
             
             if (moonData != null) {
-                Box(modifier = Modifier.size(16.dp)) {
+                Box(modifier = Modifier.size(12.dp)) {
                     MoonVisualization(
                         moonData = moonData,
                         locationData = locationData,
@@ -258,7 +330,7 @@ fun DayCell(
                 // Fallback for events if daily data missing (shouldn't happen with updated VM)
                 Box(
                     modifier = Modifier
-                        .size(4.dp)
+                        .size(3.dp)
                         .clip(CircleShape)
                         .background(if (isSelected) Color.Black else Color.Gray)
                 )
@@ -271,24 +343,43 @@ fun DayCell(
 fun EventList(
     selectedDate: LocalDate,
     events: List<LunarEvent>,
+    notes: Map<LocalDate, String>,
+    onSaveNote: (LocalDate, String) -> Unit,
     locationData: LocationData,
     modifier: Modifier = Modifier
 ) {
     val dayEvents = events.filter { it.dateTime.date == selectedDate }
+    val currentNote = notes[selectedDate] ?: ""
     
     LazyColumn(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
             val monthName = Month(selectedDate.monthNumber).name.lowercase().replaceFirstChar { it.uppercase() }
             Text(
-                text = "Events for $monthName ${selectedDate.dayOfMonth}, ${selectedDate.year}",
+                text = "Details for $monthName ${selectedDate.dayOfMonth}, ${selectedDate.year}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
+            )
+        }
+        
+        item {
+            OutlinedTextField(
+                value = currentNote,
+                onValueChange = { onSaveNote(selectedDate, it) },
+                label = { Text("Daily Note", color = Color.Gray) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.Gray
+                )
             )
         }
         
@@ -322,14 +413,16 @@ fun EventItem(event: LunarEvent, locationData: LocationData) {
         ) {
             if (event.type != EventType.PERIGEE && event.type != EventType.APOGEE) {
                  Box(modifier = Modifier.size(40.dp)) {
+                    val moonData = event.moonData ?: MoonData(
+                        phase = mapEventToPhase(event.type),
+                        illumination = if (event.type == EventType.FULL_MOON) 1.0 else if (event.type == EventType.NEW_MOON) 0.0 else 0.5,
+                        age = 0.0,
+                        riseTime = null,
+                        setTime = null
+                    )
+                    
                     MoonVisualization(
-                        moonData = MoonData(
-                            phase = mapEventToPhase(event.type),
-                            illumination = if (event.type == EventType.FULL_MOON) 1.0 else if (event.type == EventType.NEW_MOON) 0.0 else 0.5,
-                            age = 0.0,
-                            riseTime = null,
-                            setTime = null
-                        ),
+                        moonData = moonData,
                         locationData = locationData,
                         modifier = Modifier.fillMaxSize()
                     )

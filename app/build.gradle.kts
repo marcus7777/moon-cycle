@@ -14,6 +14,7 @@ kotlin {
     
     wasmJs {
         browser()
+        binaries.executable()
     }
     
     sourceSets {
@@ -57,6 +58,7 @@ kotlin {
                 implementation(libs.material)
                 implementation(libs.androidx.datastore.preferences.impl)
                 implementation(libs.androidx.core.splashscreen)
+                implementation(libs.androidx.work.runtime.ktx)
             }
         }
         

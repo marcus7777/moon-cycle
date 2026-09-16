@@ -19,19 +19,6 @@ object IconManager {
         MoonPhase.WANING_CRESCENT to "com.example.moon.MainActivityWaningCrescent"
     )
 
-    fun getDrawableForPhase(phase: MoonPhase): Int {
-        return when (phase) {
-            MoonPhase.NEW -> R.drawable.moon_new
-            MoonPhase.WAXING_CRESCENT -> R.drawable.moon_waxing_crescent
-            MoonPhase.FIRST_QUARTER -> R.drawable.moon_first_quarter
-            MoonPhase.WAXING_GIBBOUS -> R.drawable.moon_waxing_gibbous
-            MoonPhase.FULL -> R.drawable.moon_full
-            MoonPhase.WANING_GIBBOUS -> R.drawable.moon_waning_gibbous
-            MoonPhase.LAST_QUARTER -> R.drawable.moon_last_quarter
-            MoonPhase.WANING_CRESCENT -> R.drawable.moon_waning_crescent
-        }
-    }
-
     fun updateIconForPhase(context: Context, currentPhase: MoonPhase) {
         val targetAlias = phaseToAlias[currentPhase] ?: return
         val packageManager = context.packageManager

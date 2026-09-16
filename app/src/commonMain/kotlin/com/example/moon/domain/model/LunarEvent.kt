@@ -6,7 +6,8 @@ data class LunarEvent(
     val type: EventType,
     val dateTime: LocalDateTime,
     val isSuperMoon: Boolean = false,
-    val isMicroMoon: Boolean = false
+    val isMicroMoon: Boolean = false,
+    val moonData: MoonData? = null
 )
 
 enum class EventType {
@@ -20,7 +21,7 @@ enum class EventType {
 
 fun formatEventName(event: LunarEvent): String {
     val base = when (event.type) {
-        EventType.NEW_MOON -> "New Moon"
+        EventType.NEW_MOON -> "Dark Moon"
         EventType.FIRST_QUARTER -> "First Quarter"
         EventType.FULL_MOON -> "Full Moon"
         EventType.LAST_QUARTER -> "Last Quarter"

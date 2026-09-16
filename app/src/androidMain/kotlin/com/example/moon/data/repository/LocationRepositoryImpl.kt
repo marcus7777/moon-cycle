@@ -17,7 +17,32 @@ class LocationRepositoryImpl(
     private val fusedLocationClient: FusedLocationProviderClient
 ) : LocationRepository {
 
-    private val manualLocation = MutableStateFlow<LocationData?>(null)
+    private val prefs = context.getSharedPreferences("location_prefs", Context.MODE_PRIVATE)
+    private val manualLocation = MutableStateFlow<LocationData?>(loadManualLocation())
+
+    private fun loadManualLocation(): LocationData? {
+        if (!prefs.contains("manual_lat")) return null
+        return LocationData(
+            latitude = prefs.getFloat("manual_lat", 0f).toDouble(),
+            longitude = prefs.getFloat("manual_lng", 0f).toDouble(),
+            name = prefs.getString("manual_name", null),
+            isDefault = false
+        )
+    }
+
+    private fun saveManualLocation(data: LocationData?) {
+        prefs.edit().apply {
+            if (data != null) {
+                putFloat("manual_lat", data.latitude.toFloat())
+                putFloat("manual_lng", data.longitude.toFloat())
+                putString("manual_name", data.name)
+            } else {
+                remove("manual_lat")
+                remove("manual_lng")
+                remove("manual_name")
+            }
+        }.apply()
+    }
 
     @SuppressLint("MissingPermission")
     override suspend fun getCurrentLocation(): LocationData {
@@ -73,16 +98,27 @@ class LocationRepositoryImpl(
     }
 
     override fun setManualLocation(latitude: Double, longitude: Double, name: String?) {
-        manualLocation.value = LocationData(
+        val data = LocationData(
             latitude = latitude,
             longitude = longitude,
             name = name,
             isDefault = false
         )
+        manualLocation.value = data
+        saveManualLocation(data)
     }
 
     override fun clearManualLocation() {
         manualLocation.value = null
+        saveManualLocation(null)
+    }
+
+    override fun isFirstLaunch(): Boolean {
+        return prefs.getBoolean("first_launch", true)
+    }
+
+    override fun setFirstLaunchCompleted() {
+        prefs.edit().putBoolean("first_launch", false).apply()
     }
 
     private fun Location.toLocationData(): LocationData {

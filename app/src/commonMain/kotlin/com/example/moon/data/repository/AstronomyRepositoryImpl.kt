@@ -131,7 +131,7 @@ class AstronomyRepositoryImpl : AstronomyRepository {
         var currentMs = startInstant.toEpochMilliseconds()
         val stepMs = 6 * 60 * 60 * 1000L 
         
-        val maxSteps = (32 * 24) / 6
+        val maxSteps = (45 * 24) / 6 // Increased range to ensure we find the next Full/Dark moon
         
         var prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
         
@@ -140,7 +140,7 @@ class AstronomyRepositoryImpl : AstronomyRepository {
             val nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(nextMs).toKastro().calculateLunarIllumination().phase
             
             val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
-            if (crossedEvent != null) {
+            if (crossedEvent != null && (crossedEvent.type == EventType.NEW_MOON || crossedEvent.type == EventType.FULL_MOON)) {
                 return crossedEvent
             }
             
@@ -174,7 +174,8 @@ class AstronomyRepositoryImpl : AstronomyRepository {
             
             val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
             if (crossedEvent != null && crossedEvent.dateTime.toInstant(TimeZone.currentSystemDefault()) < endInstant) {
-                events.add(crossedEvent)
+                val moonData = getMoonData(crossedEvent.dateTime, location)
+                events.add(crossedEvent.copy(moonData = moonData))
             }
             
             currentMs = nextMs

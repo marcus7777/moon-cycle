@@ -1,0 +1,660 @@
+/* ===================================================================
+   Moon Cycle - Modern Web App Styles
+   AMOLED Dark Aesthetic matching Compose Material 3 Dark Theme
+   =================================================================== */
+
+:root {
+  --bg-color: #000000;
+  --surface-color: #121212;
+  --surface-card: rgba(255, 255, 255, 0.08);
+  --surface-card-hover: rgba(255, 255, 255, 0.12);
+  --dialog-bg: #1c1c1e;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.45);
+  --accent-color: #e2e8f0;
+  --border-color: rgba(255, 255, 255, 0.15);
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --transition-speed: 0.3s;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-stack);
+  overflow: hidden;
+  position: fixed;
+}
+
+/* App Container */
+#app {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-color);
+}
+
+/* Base Screen View Layout */
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-color);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+  transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+  z-index: 2;
+}
+
+/* ===================================================================
+   MAIN SCREEN
+   =================================================================== */
+#screen-main {
+  justify-content: space-between;
+  align-items: center;
+  padding: env(safe-area-inset-top, 16px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 24px) env(safe-area-inset-left, 16px);
+}
+
+/* Moon Canvas Wrapper (Persistent Center) */
+.moon-canvas-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(85vw, 420px);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  cursor: pointer;
+}
+
+#main-moon-canvas {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.05));
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Ambient UI Overlays */
+.ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.5s ease;
+  padding: 16px;
+}
+
+.ui-overlay.hidden-ui {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-overlay > * {
+  pointer-events: auto;
+}
+
+/* Top Action Bar */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.icon-btn:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.icon-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+/* Header Content (Location & Phase Name) */
+.main-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.location-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  margin-bottom: 12px;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.location-badge:hover {
+  background-color: var(--surface-card-hover);
+}
+
+.location-badge:active {
+  transform: scale(0.97);
+}
+
+.location-badge svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.phase-title {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Bottom Actions & Countdown */
+.main-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: max(16px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.event-countdown {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  font-weight: 400;
+}
+
+.primary-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  padding: 12px 28px;
+  border-radius: var(--radius-full);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primary-btn:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.primary-btn:active {
+  transform: translateY(0);
+}
+
+/* ===================================================================
+   DETAIL SCREEN
+   =================================================================== */
+#screen-details {
+  padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)) 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 20px auto;
+  position: relative;
+}
+
+.screen-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.detail-content {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detail-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(10px);
+}
+
+.detail-moon-canvas {
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+}
+
+.detail-hero-text h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.detail-hero-text p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.detail-label {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* ===================================================================
+   CALENDAR SCREEN
+   =================================================================== */
+#screen-calendar {
+  padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)) 12px;
+  overflow-y: auto;
+}
+
+.calendar-container {
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.month-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.month-label {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* Calendar Grid */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.15s, transform 0.1s;
+  padding: 2px;
+}
+
+.day-cell:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.day-cell.selected {
+  background-color: #ffffff;
+  color: #000000 !important;
+}
+
+.day-cell.empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+.day-number {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.day-cell.selected .day-number {
+  color: #000000;
+}
+
+.day-moon-canvas {
+  width: 18px;
+  height: 18px;
+}
+
+.day-event-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  margin-top: 1px;
+}
+
+.day-cell.selected .day-event-dot {
+  background-color: #000000;
+}
+
+/* Events List */
+.events-divider {
+  width: 100%;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.15);
+  margin: 16px 0;
+}
+
+.events-section {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.events-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.event-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-color);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+}
+
+.event-card-canvas {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.event-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.event-icon-wrapper svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.event-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.event-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.event-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.no-events-msg {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  padding: 12px 0;
+}
+
+/* ===================================================================
+   LOCATION PICKER MODAL
+   =================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  padding: 16px;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-card {
+  background-color: var(--dialog-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  transform: scale(0.94);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .modal-card {
+  transform: scale(1);
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.modal-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.city-select-box {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  outline: none;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+.city-select-box option {
+  background-color: #2c2c2e;
+  color: #ffffff;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.text-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.text-btn:hover {
+  color: var(--text-primary);
+}
+
+.gps-btn {
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  padding: 10px 18px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.gps-btn:hover {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.gps-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+/* ===================================================================
+   RESPONSIVE ADAPTATIONS (Widescreen / Tablet)
+   =================================================================== */
+@media (min-width: 900px) {
+  .screen {
+    max-width: 800px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.98);
+  }
+  .screen.active {
+    transform: translateX(-50%) scale(1);
+  }
+  .moon-canvas-container {
+    width: 380px;
+  }
+}

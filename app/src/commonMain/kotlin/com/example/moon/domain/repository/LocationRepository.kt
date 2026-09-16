@@ -8,6 +8,9 @@ interface LocationRepository {
     suspend fun getCurrentLocation(): LocationData
     fun setManualLocation(latitude: Double, longitude: Double, name: String? = null)
     fun clearManualLocation()
+    
+    fun isFirstLaunch(): Boolean
+    fun setFirstLaunchCompleted()
 
     companion object {
         val DEFAULT_LOCATION = LocationData(

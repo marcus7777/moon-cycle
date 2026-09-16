@@ -6,17 +6,38 @@ import com.example.moon.data.repository.AstronomyRepositoryImpl
 import com.example.moon.domain.model.LocationData
 import com.example.moon.domain.model.LunarEvent
 import com.example.moon.domain.model.MoonData
+import com.example.moon.domain.repository.NoteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.*
 
-class CalendarViewModel : ViewModel() {
+class CalendarViewModel(
+    private val noteRepository: NoteRepository? = null
+) : ViewModel() {
     private val astronomyRepository = AstronomyRepositoryImpl()
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            noteRepository?.getNotes()?.collect { notes ->
+                _uiState.value = _uiState.value.copy(notes = notes)
+            }
+        }
+    }
+
+    fun saveNote(date: LocalDate, note: String) {
+        viewModelScope.launch {
+            if (note.isBlank()) {
+                noteRepository?.deleteNote(date)
+            } else {
+                noteRepository?.saveNote(date, note)
+            }
+        }
+    }
 
     fun loadEvents(year: Int, month: Int, location: LocationData) {
         viewModelScope.launch {
@@ -63,5 +84,6 @@ data class CalendarUiState(
     val selectedMonth: Int = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).monthNumber,
     val events: List<LunarEvent> = emptyList(),
     val dailyMoonData: Map<LocalDate, MoonData> = emptyMap(),
+    val notes: Map<LocalDate, String> = emptyMap(),
     val isLoading: Boolean = false
 )

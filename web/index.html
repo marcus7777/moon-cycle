@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="A real-time 3D moon phase tracker, lunar calendar, and astronomical position calculator.">
+
+  <title>Moon Cycle</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ==========================================
+         MAIN SCREEN VIEW
+         ========================================== -->
+    <section id="screen-main" class="screen active">
+      <!-- Centered 3D Moon Canvas -->
+      <div class="moon-canvas-container">
+        <canvas id="main-moon-canvas"></canvas>
+      </div>
+
+      <!-- Ambient UI Overlay (Auto-fades on idle) -->
+      <div class="ui-overlay">
+        <!-- Top Action Bar -->
+        <header class="top-bar">
+          <button id="btn-toggle-text" class="icon-btn" aria-label="Toggle UI Visibility" title="Hide/Show UI">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+            </svg>
+          </button>
+
+          <button id="btn-open-calendar" class="icon-btn" aria-label="Open Lunar Calendar" title="Calendar">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 4h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+            </svg>
+          </button>
+        </header>
+
+        <!-- Top Header Info -->
+        <div class="main-header">
+          <button id="location-badge" class="location-badge" title="Change Location">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <span id="location-name">London</span>
+          </button>
+          <h1 id="phase-title" class="phase-title">Waxing Gibbous</h1>
+        </div>
+
+        <!-- Bottom Actions & Event Countdown -->
+        <footer class="main-footer">
+          <p id="event-countdown" class="event-countdown"></p>
+          <button id="btn-details" class="primary-btn">
+            View Details
+          </button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         MOON DETAILS SCREEN VIEW
+         ========================================== -->
+    <section id="screen-details" class="screen">
+      <header class="screen-header">
+        <button id="btn-details-back" class="icon-btn" aria-label="Back">
+          <svg viewBox="0 0 24 24">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+        </button>
+        <h2 class="screen-title">Moon Details</h2>
+        <div style="width: 44px;"></div>
+      </header>
+
+      <div class="detail-content">
+        <!-- Visual Hero Card -->
+        <div class="detail-hero">
+          <canvas id="detail-moon-canvas" class="detail-moon-canvas"></canvas>
+          <div class="detail-hero-text">
+            <h3 id="detail-phase-name">Waxing Gibbous</h3>
+            <p id="detail-illumination-hero">Illumination: 75%</p>
+          </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Phase</span>
+            <span id="detail-phase-val" class="detail-value">--</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Illumination</span>
+            <span id="detail-illumination-val" class="detail-value">--</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Age</span>
+            <span id="detail-age-val" class="detail-value">--</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Moonrise</span>
+            <span id="detail-rise-val" class="detail-value">--:--</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Moonset</span>
+            <span id="detail-set-val" class="detail-value">--:--</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Altitude</span>
+            <span id="detail-altitude-val" class="detail-value">--°</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Azimuth</span>
+            <span id="detail-azimuth-val" class="detail-value">--°</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         LUNAR CALENDAR SCREEN VIEW
+         ========================================== -->
+    <section id="screen-calendar" class="screen">
+      <header class="screen-header">
+        <button id="btn-calendar-back" class="icon-btn" aria-label="Back">
+          <svg viewBox="0 0 24 24">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+        </button>
+        <h2 class="screen-title">Lunar Calendar</h2>
+        <div style="width: 44px;"></div>
+      </header>
+
+      <div class="calendar-container">
+        <!-- Month Navigation -->
+        <div class="month-nav">
+          <button id="btn-prev-month" class="icon-btn" aria-label="Previous Month">
+            <svg viewBox="0 0 24 24">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+          </button>
+          <span id="month-label" class="month-label">September 2026</span>
+          <button id="btn-next-month" class="icon-btn" aria-label="Next Month">
+            <svg viewBox="0 0 24 24">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Weekdays Header -->
+        <div class="calendar-weekdays">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+
+        <!-- Dynamic Days Grid -->
+        <div id="calendar-days-grid" class="calendar-days"></div>
+
+        <div class="events-divider"></div>
+
+        <!-- Selected Date Events Section -->
+        <div class="events-section">
+          <h3 id="events-date-title" class="events-title">Events</h3>
+          <div id="events-list-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         LOCATION PICKER MODAL DIALOG
+         ========================================== -->
+    <div id="location-modal" class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Update Location</h3>
+        <p class="modal-desc">Select a major city to view the moon from that location.</p>
+
+        <select id="city-select" class="city-select-box">
+          <option value="" disabled selected>Select a City</option>
+        </select>
+
+        <div class="modal-actions">
+          <button id="btn-modal-cancel" class="text-btn">Cancel</button>
+          <button id="btn-use-gps" class="gps-btn">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+            </svg>
+            Use My Location
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="astronomy.js"></script>
+  <script src="moonRenderer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

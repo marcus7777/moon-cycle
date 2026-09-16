@@ -1,5 +1,6 @@
 package com.example.moon.ui.navigation
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
@@ -11,11 +12,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.moon.domain.manager.WallpaperManager
 import com.example.moon.domain.repository.AstronomyRepository
 import com.example.moon.domain.repository.LocationRepository
+import com.example.moon.domain.repository.NoteRepository
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.compose.runtime.mutableStateListOf
 import androidx.navigation3.ui.NavDisplay
 import com.example.moon.ui.MoonViewModel
 import com.example.moon.ui.screens.CalendarScreen
@@ -32,13 +35,15 @@ object MoonDetails : NavKey
 @Serializable
 object MoonCalendar : NavKey
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun MoonNavigation(
     locationRepository: LocationRepository,
-    astronomyRepository: AstronomyRepository
+    astronomyRepository: AstronomyRepository,
+    wallpaperManager: WallpaperManager? = null,
+    noteRepository: NoteRepository? = null
 ) {
-    val backStack = rememberNavBackStack(MoonHome)
+    val backStack = remember { mutableStateListOf<NavKey>(MoonHome) }
     
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     val directive = remember(windowAdaptiveInfo) {
@@ -49,11 +54,13 @@ fun MoonNavigation(
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>(directive = directive)
     
     val viewModel: MoonViewModel = viewModel {
-        MoonViewModel(locationRepository, astronomyRepository)
+        MoonViewModel(locationRepository, astronomyRepository, wallpaperManager)
     }
     val moonData by viewModel.moonData.collectAsState()
     val locationData by viewModel.locationData.collectAsState()
     val isTextVisible by viewModel.isTextVisible.collectAsState()
+    val isWallpaperScheduled by viewModel.isWallpaperScheduled.collectAsState()
+    val showSwipeHint by viewModel.showSwipeHint.collectAsState()
 
     val entries: List<NavEntry<NavKey>> = backStack.map { key ->
         when (key) {
@@ -65,7 +72,10 @@ fun MoonNavigation(
                             MoonDetailScreen(
                                 moonData = moonData,
                                 locationData = locationData,
-                                onBack = { /* No-op in placeholder */ }
+                                onBack = { /* No-op in placeholder */ },
+                                isWallpaperScheduled = isWallpaperScheduled,
+                                onToggleWallpaperSchedule = { viewModel.toggleWallpaperSchedule(it) },
+                                onUpdateWallpaperNow = { viewModel.updateWallpaperNow() }
                             )
                         }
                     )
@@ -74,6 +84,8 @@ fun MoonNavigation(
                         moonData = moonData,
                         locationData = locationData,
                         isTextVisible = isTextVisible,
+                        showSwipeHint = showSwipeHint,
+                        onDismissSwipeHint = { viewModel.dismissSwipeHint() },
                         onToggleTextVisibility = { viewModel.toggleTextVisibility() },
                         onInteraction = { viewModel.showTextWithTimer() },
                         onShowDetails = {
@@ -95,7 +107,10 @@ fun MoonNavigation(
                     MoonDetailScreen(
                         moonData = moonData,
                         locationData = locationData,
-                        onBack = { backStack.removeLastOrNull() }
+                        onBack = { backStack.removeLastOrNull() },
+                        isWallpaperScheduled = isWallpaperScheduled,
+                        onToggleWallpaperSchedule = { viewModel.toggleWallpaperSchedule(it) },
+                        onUpdateWallpaperNow = { viewModel.updateWallpaperNow() }
                     )
                 }
             }
@@ -106,6 +121,7 @@ fun MoonNavigation(
                 ) {
                     CalendarScreen(
                         locationData = locationData,
+                        noteRepository = noteRepository,
                         onBack = { backStack.removeLastOrNull() }
                     )
                 }
