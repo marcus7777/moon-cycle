@@ -28,7 +28,8 @@ object MoonVectorEngine {
         val isSouthernHemisphere = locationData.latitude < 0
         val tiltAngle = moonData.parallacticAngle?.toFloat() ?: 0f
         
-        val radius = (size.minDimension / 2f) * 0.8f
+        // Size factor adjusted to 0.5f to ensure 1 radius of padding around the moon (D = W/2)
+        val radius = (size.minDimension / 2f) * 0.5f
         val center = Offset(size.width / 2f, size.height / 2f)
 
         withTransform({

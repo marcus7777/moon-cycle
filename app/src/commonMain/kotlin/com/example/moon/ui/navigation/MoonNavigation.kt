@@ -33,7 +33,7 @@ object MoonHome : NavKey
 object MoonDetails : NavKey
 
 @Serializable
-object MoonCalendar : NavKey
+data class MoonCalendar(val initialPage: Int = 0) : NavKey
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -48,13 +48,16 @@ fun MoonNavigation(
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     val directive = remember(windowAdaptiveInfo) {
         calculatePaneScaffoldDirective(windowAdaptiveInfo)
-            .copy(horizontalPartitionSpacerSize = 0.dp)
+            .copy(
+                horizontalPartitionSpacerSize = 0.dp,
+                maxHorizontalPartitions = 1 // Force single pane so the moon screen is centered
+            )
     }
     
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>(directive = directive)
     
     val viewModel: MoonViewModel = viewModel {
-        MoonViewModel(locationRepository, astronomyRepository, wallpaperManager)
+        MoonViewModel(locationRepository, astronomyRepository, wallpaperManager, noteRepository)
     }
     val moonData by viewModel.moonData.collectAsState()
     val locationData by viewModel.locationData.collectAsState()
@@ -67,18 +70,7 @@ fun MoonNavigation(
             is MoonHome -> {
                 NavEntry(
                     key = key,
-                    metadata = ListDetailSceneStrategy.listPane(
-                        detailPlaceholder = {
-                            MoonDetailScreen(
-                                moonData = moonData,
-                                locationData = locationData,
-                                onBack = { /* No-op in placeholder */ },
-                                isWallpaperScheduled = isWallpaperScheduled,
-                                onToggleWallpaperSchedule = { viewModel.toggleWallpaperSchedule(it) },
-                                onUpdateWallpaperNow = { viewModel.updateWallpaperNow() }
-                            )
-                        }
-                    )
+                    metadata = ListDetailSceneStrategy.listPane()
                 ) {
                     MainScreen(
                         moonData = moonData,
@@ -91,8 +83,8 @@ fun MoonNavigation(
                         onShowDetails = {
                             backStack.add(MoonDetails)
                         },
-                        onShowCalendar = {
-                            backStack.add(MoonCalendar)
+                        onShowCalendar = { initialPage ->
+                            backStack.add(MoonCalendar(initialPage = initialPage))
                         },
                         onSetManualLocation = { lat, lng, name -> viewModel.setManualLocation(lat, lng, name) },
                         onUseDeviceLocation = { viewModel.useDeviceLocation() }
@@ -110,7 +102,11 @@ fun MoonNavigation(
                         onBack = { backStack.removeLastOrNull() },
                         isWallpaperScheduled = isWallpaperScheduled,
                         onToggleWallpaperSchedule = { viewModel.toggleWallpaperSchedule(it) },
-                        onUpdateWallpaperNow = { viewModel.updateWallpaperNow() }
+                        onUpdateWallpaperNow = { viewModel.updateWallpaperNow() },
+                        onExportJsonl = { viewModel.exportNotesJsonl() },
+                        onImportJsonl = { text, callback -> viewModel.importNotesJsonl(text, callback) },
+                        onExportICal = { viewModel.exportNotesICal() },
+                        onImportICal = { text, callback -> viewModel.importNotesICal(text, callback) }
                     )
                 }
             }
@@ -121,7 +117,9 @@ fun MoonNavigation(
                 ) {
                     CalendarScreen(
                         locationData = locationData,
+                        moonData = moonData,
                         noteRepository = noteRepository,
+                        initialPage = key.initialPage,
                         onBack = { backStack.removeLastOrNull() }
                     )
                 }

@@ -7,8 +7,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,6 +20,11 @@ import com.example.moon.domain.model.LocationData
 import com.example.moon.domain.model.MoonData
 import com.example.moon.ui.components.MoonVisualization
 
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.geometry.Offset
+
 @Composable
 fun MoonDetailScreen(
     moonData: MoonData?,
@@ -25,11 +32,38 @@ fun MoonDetailScreen(
     isWallpaperScheduled: Boolean = false,
     onToggleWallpaperSchedule: (Boolean) -> Unit = {},
     onUpdateWallpaperNow: () -> Unit = {},
+    onExportJsonl: () -> String = { "" },
+    onImportJsonl: (String, (Boolean) -> Unit) -> Unit = { _, _ -> },
+    onExportICal: () -> String = { "" },
+    onImportICal: (String, (Boolean) -> Unit) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     locationData: LocationData = LocationData(latitude = 51.5074, longitude = -0.1278)
 ) {
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y > 40) {
+                    onBack()
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    var showExportDialog by remember { mutableStateOf(false) }
+    var exportText by remember { mutableStateOf("") }
+    var showImportDialog by remember { mutableStateOf(false) }
+    var isICalMode by remember { mutableStateOf(false) }
+    var importInputText by remember { mutableStateOf("") }
+    var importStatusMessage by remember { mutableStateOf("") }
+
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
         color = Color.Black
     ) {
         Column(
@@ -120,6 +154,104 @@ fun MoonDetailScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
                     
+                    // Backup / JSONL Data space
+                    Text(
+                        text = "Data Backup & Recovery (JSONL)",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    isICalMode = false
+                                    exportText = onExportJsonl()
+                                    showExportDialog = true
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f), contentColor = Color.White)
+                            ) {
+                                Icon(Icons.Rounded.Download, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Download Data", style = MaterialTheme.typography.labelMedium)
+                            }
+
+                            Button(
+                                onClick = {
+                                    isICalMode = false
+                                    importInputText = ""
+                                    importStatusMessage = ""
+                                    showImportDialog = true
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f), contentColor = Color.White)
+                            ) {
+                                Icon(Icons.Rounded.Upload, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Upload Data", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // Calendar Sync iCal space
+                    Text(
+                        text = "Calendar Sync (iCal / .ics)",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    isICalMode = true
+                                    exportText = onExportICal()
+                                    showExportDialog = true
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f), contentColor = Color.White)
+                            ) {
+                                Icon(Icons.Rounded.Download, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Export iCal", style = MaterialTheme.typography.labelMedium)
+                            }
+
+                            Button(
+                                onClick = {
+                                    isICalMode = true
+                                    importInputText = ""
+                                    importStatusMessage = ""
+                                    showImportDialog = true
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f), contentColor = Color.White)
+                            ) {
+                                Icon(Icons.Rounded.Upload, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Import iCal", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
                     // Wallpaper Settings
                     Text(
                         text = "Wallpaper Settings",
@@ -179,6 +311,75 @@ fun MoonDetailScreen(
                 )
             }
         }
+    }
+
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            containerColor = Color(0xFF151515),
+            title = { Text(if (isICalMode) "Your iCal Export Data" else "Your JSONL Export Data", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = exportText,
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color.White, unfocusedBorderColor = Color.Gray)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showExportDialog = false }) {
+                    Text("Close", color = Color.White)
+                }
+            }
+        )
+    }
+
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            containerColor = Color(0xFF151515),
+            title = { Text(if (isICalMode) "Upload / Paste iCal Data" else "Upload / Paste JSONL Data", color = Color.White) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = importInputText,
+                        onValueChange = { importInputText = it },
+                        placeholder = { Text(if (isICalMode) "Paste iCal text here starting with BEGIN:VCALENDAR..." else "Paste JSONL lines here...", color = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth().height(160.dp),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color.White, unfocusedBorderColor = Color.Gray)
+                    )
+                    if (importStatusMessage.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(importStatusMessage, color = if (importStatusMessage.contains("Success")) Color.Green else Color.Red, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (isICalMode) {
+                            onImportICal(importInputText) { success ->
+                                importStatusMessage = if (success) "Success! iCal Data fully imported." else "Error: Invalid iCal backup format."
+                            }
+                        } else {
+                            onImportJsonl(importInputText) { success ->
+                                importStatusMessage = if (success) "Success! Data fully loaded." else "Error: Invalid JSONL backup format."
+                            }
+                        }
+                    }
+                ) {
+                    Text("Import Now", color = Color.Green)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text("Cancel", color = Color.White)
+                }
+            }
+        )
     }
 }
 

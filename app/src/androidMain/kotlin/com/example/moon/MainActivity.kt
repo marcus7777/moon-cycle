@@ -66,11 +66,27 @@ class MainActivity : ComponentActivity() {
         
         // Update icon and mark app as ready
         MainScope().launch {
-            locationRepository.getLocationUpdates().collect { location ->
+            try {
+                // 1. Get initial location quickly with timeout/fallback to unblock splash screen
+                val initialLocation = locationRepository.getCurrentLocation()
                 val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                val data = astronomyRepository.getMoonData(now, location)
-                IconManager.updateIconForPhase(this@MainActivity, data.phase)
+                val initialData = astronomyRepository.getMoonData(now, initialLocation)
+                IconManager.updateIconForPhase(this@MainActivity, initialData.phase)
+            } catch (e: Exception) {
+                // Fallback to avoid getting stuck
+            } finally {
                 isAppReady = true
+            }
+
+            // 2. Start observing for subsequent updates (e.g. location changes)
+            try {
+                locationRepository.getLocationUpdates().collect { location ->
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                    val updatedData = astronomyRepository.getMoonData(now, location)
+                    IconManager.updateIconForPhase(this@MainActivity, updatedData.phase)
+                }
+            } catch (e: Exception) {
+                // Ignore collection errors
             }
         }
         

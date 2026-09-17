@@ -4,7 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -37,7 +37,7 @@ fun MainScreen(
     onToggleTextVisibility: () -> Unit,
     onInteraction: () -> Unit,
     onShowDetails: () -> Unit,
-    onShowCalendar: () -> Unit,
+    onShowCalendar: (initialPage: Int) -> Unit,
     onSetManualLocation: (Double, Double, String?) -> Unit,
     onUseDeviceLocation: () -> Unit,
     modifier: Modifier = Modifier
@@ -70,13 +70,27 @@ fun MainScreen(
                     }
                 }
                 .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
+                    detectDragGestures(
                         onDragStart = { hasSwipedInThisGesture = false },
-                        onHorizontalDrag = { change, dragAmount ->
-                            if (!hasSwipedInThisGesture && dragAmount < -15) { 
-                                hasSwipedInThisGesture = true
-                                if (showSwipeHint) onDismissSwipeHint()
-                                onShowCalendar()
+                        onDrag = { change, dragAmount ->
+                            if (!hasSwipedInThisGesture) {
+                                // Swipe left to get Daily Note
+                                if (dragAmount.x < -20) {
+                                    hasSwipedInThisGesture = true
+                                    if (showSwipeHint) onDismissSwipeHint()
+                                    onShowCalendar(1)
+                                }
+                                // Swipe right for Calendar
+                                else if (dragAmount.x > 20) {
+                                    hasSwipedInThisGesture = true
+                                    if (showSwipeHint) onDismissSwipeHint()
+                                    onShowCalendar(0)
+                                }
+                                // Vertical swipe (up) for Details
+                                else if (dragAmount.y < -20) {
+                                    hasSwipedInThisGesture = true
+                                    onShowDetails()
+                                }
                             }
                             change.consume()
                         }
@@ -95,13 +109,13 @@ fun MainScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        // This MoonVisualization exactly matches the system splash icon's center position
                         MoonVisualization(
                             moonData = moonData,
                             locationData = locationData,
                             modifier = Modifier
-                                .size(240.dp) // Standard splash icon container is roughly this size visually
-                                .padding(24.dp) // Provide internal safety margin
+                                .fillMaxHeight(0.85f) // Scale to 85% of screen height
+                                .aspectRatio(1f)      // Keep it square
+                                .padding(16.dp)
                         )
                     }
                 }
@@ -189,19 +203,6 @@ fun MainScreen(
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = Color.White.copy(alpha = 0.7f)
                                     )
-                                }
-
-                                Spacer(modifier = Modifier.height(24.dp))
-
-                                Button(
-                                    onClick = onShowDetails,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.White.copy(alpha = 0.1f),
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    val buttonText = if (locationData.name != null) "Details from ${locationData.name}" else "View Details"
-                                    Text(buttonText)
                                 }
                             }
                         }

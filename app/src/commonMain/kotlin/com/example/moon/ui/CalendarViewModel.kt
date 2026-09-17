@@ -29,12 +29,12 @@ class CalendarViewModel(
         }
     }
 
-    fun saveNote(date: LocalDate, note: String) {
+    fun saveNote(date: LocalDate, note: String, locationData: LocationData? = null) {
         viewModelScope.launch {
             if (note.isBlank()) {
                 noteRepository?.deleteNote(date)
             } else {
-                noteRepository?.saveNote(date, note)
+                noteRepository?.saveNote(date, note, locationData)
             }
         }
     }
