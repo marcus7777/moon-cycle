@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                 val initialLocation = locationRepository.getCurrentLocation()
                 val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                 val initialData = astronomyRepository.getMoonData(now, initialLocation)
-                IconManager.updateIconForPhase(this@MainActivity, initialData.phase)
+                IconManager.updateIconForPhase(this@MainActivity, initialData.phase, initialLocation.latitude)
             } catch (e: Exception) {
                 // Fallback to avoid getting stuck
             } finally {
@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
                 locationRepository.getLocationUpdates().collect { location ->
                     val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                     val updatedData = astronomyRepository.getMoonData(now, location)
-                    IconManager.updateIconForPhase(this@MainActivity, updatedData.phase)
+                    IconManager.updateIconForPhase(this@MainActivity, updatedData.phase, location.latitude)
                 }
             } catch (e: Exception) {
                 // Ignore collection errors

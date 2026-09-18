@@ -33,9 +33,12 @@ object MoonVectorEngine {
         val center = Offset(size.width / 2f, size.height / 2f)
 
         withTransform({
-            rotate(tiltAngle, pivot = center)
             if (isSouthernHemisphere) {
-                scale(scaleX = -1f, scaleY = 1f, pivot = center)
+                // In the Southern Hemisphere, the moon appears rotated 180 degrees 
+                // compared to the Northern Hemisphere. This also correctly handles the phase flip.
+                rotate(tiltAngle + 180f, pivot = center)
+            } else {
+                rotate(tiltAngle, pivot = center)
             }
         }) {
             val illuminationFloat = moonData.illumination.toFloat()
@@ -139,15 +142,12 @@ object MoonVectorEngine {
         val illumination = moonData.illumination.toFloat()
         val phase = moonData.phase
         val isSouthern = locationData.latitude < 0
-        val tilt = moonData.parallacticAngle?.toFloat() ?: 0f
-
         val isWaxing = phase == MoonPhase.WAXING_CRESCENT || 
                        phase == MoonPhase.FIRST_QUARTER || 
                        phase == MoonPhase.WAXING_GIBBOUS
 
-        // Scale factor for the horizontal flip if in Southern Hemisphere
-        val scaleX = if (isSouthern) -1 else 1
-        val rotation = tilt
+        val tilt = moonData.parallacticAngle?.toFloat() ?: 0f
+        val rotation = if (isSouthern) tilt + 180f else tilt
 
         // Simplified SVG logic for 3D effect using <defs> for gradients
         return """
@@ -164,7 +164,7 @@ object MoonVectorEngine {
                         <stop offset="100%" stop-color="#FBC02D" />
                     </radialGradient>
                 </defs>
-                <g transform="rotate($rotation $centerX $centerY) scale($scaleX 1) translate(${if (isSouthern) -108 else 0} 0)">
+                <g transform="rotate($rotation $centerX $centerY)">
                     <!-- Base Sphere -->
                     <circle cx="$centerX" cy="$centerY" r="$radius" fill="url(#darkSide)" />
                     

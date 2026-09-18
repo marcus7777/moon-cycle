@@ -38,13 +38,9 @@ fun MainScreen(
     onInteraction: () -> Unit,
     onShowDetails: () -> Unit,
     onShowCalendar: (initialPage: Int) -> Unit,
-    onSetManualLocation: (Double, Double, String?) -> Unit,
-    onUseDeviceLocation: () -> Unit,
-    onRequestLocationPermission: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var hasSwipedInThisGesture by remember { mutableStateOf(false) }
-    var showLocationDialog by remember { mutableStateOf(false) }
     
     // Smooth fade in for the first moon render to match splash
     var moonVisible by remember { mutableStateOf(false) }
@@ -99,7 +95,6 @@ fun MainScreen(
                 }
         ) {
             // Background Moon - Persistent
-            // ... (keep existing moon visualization)
             if (moonData != null) {
                 AnimatedVisibility(
                     visible = moonVisible,
@@ -150,30 +145,6 @@ fun MainScreen(
                                 modifier = Modifier.padding(top = 40.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                // Location Badge - Clickable
-                                Surface(
-                                    color = if (locationData.isDefault) Color.DarkGray else Color.White.copy(alpha = 0.1f),
-                                    shape = MaterialTheme.shapes.medium,
-                                    modifier = Modifier
-                                        .padding(bottom = 16.dp)
-                                        .clickable { showLocationDialog = true }
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.LocationOn,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        val locText = locationData.name ?: if (locationData.isDefault) "London" else "Custom Location"
-                                        Text(text = locText, style = MaterialTheme.typography.labelSmall, color = Color.White)
-                                    }
-                                }
-
                                 Text(
                                     text = moonData.phase.description,
                                     style = MaterialTheme.typography.headlineLarge,
@@ -242,143 +213,4 @@ fun MainScreen(
             }
         }
     }
-
-    if (showLocationDialog) {
-        LocationPickerDialog(
-            locationData = locationData,
-            onDismiss = { showLocationDialog = false },
-            onSetManual = { lat, lng, name ->
-                onSetManualLocation(lat, lng, name)
-                showLocationDialog = false
-            },
-            onUseDevice = {
-                onRequestLocationPermission {
-                    onUseDeviceLocation()
-                    showLocationDialog = false
-                }
-            }
-        )
-    }
 }
-
-@Composable
-fun LocationPickerDialog(
-    locationData: LocationData,
-    onDismiss: () -> Unit,
-    onSetManual: (Double, Double, String?) -> Unit,
-    onUseDevice: () -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    
-    val selectedCityName = if (locationData.isDefault && locationData.name == "London") {
-        "Select a City"
-    } else if (!locationData.isDefault && locationData.name != null) {
-        locationData.name
-    } else if (!locationData.isDefault) {
-         "Current Location"
-    } else {
-        "Select a City"
-    }
-
-    val cities = listOf(
-        City("London", 51.5074, -0.1278),
-        City("New York", 40.7128, -74.0060),
-        City("Tokyo", 35.6762, 139.6503),
-        City("Sydney", -33.8688, 151.2093),
-        City("Berlin", 52.5200, 13.4050),
-        City("Dubai", 25.2048, 55.2708),
-        City("Los Angeles", 34.0522, -118.2437),
-        City("Paris", 48.8566, 2.3522),
-        City("Mumbai", 19.0760, 72.8777),
-        City("São Paulo", -23.5505, -46.6333),
-        City("Cairo", 30.0444, 31.2357),
-        City("Cape Town", -33.9249, 18.4241),
-        City("Moscow", 55.7558, 37.6173),
-        City("Beijing", 39.9042, 116.4074),
-        City("Singapore", 1.3521, 103.8198),
-        City("Bangkok", 13.7563, 100.5018),
-        City("Mexico City", 19.4326, -99.1332),
-        City("Seoul", 37.5665, 126.9780),
-        City("Toronto", 43.6532, -79.3832),
-        City("Madrid", 40.4168, -3.7038)
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1A1A1A), // Dark mode background
-        titleContentColor = Color.White,
-        textContentColor = Color.LightGray,
-        title = { Text("Update Location") },
-        text = {
-            Column {
-                Text("Select a major city to view the moon from that location.")
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // City Dropdown
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White.copy(alpha = 0.05f), MaterialTheme.shapes.small)
-                        .clickable { expanded = true }
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = selectedCityName ?: "Select a City", color = if (selectedCityName == "Select a City") Color.Gray else Color.White)
-                        Icon(
-                            imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                            contentDescription = null,
-                            tint = Color.White
-                        )
-                    }
-                    
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        modifier = Modifier
-                            .fillMaxWidth(0.8f)
-                            .background(Color(0xFF2C2C2C))
-                    ) {
-                        DropdownMenuItem(
-                            text = { 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Rounded.MyLocation, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Use My Current Location", color = Color.White)
-                                }
-                            },
-                            onClick = {
-                                expanded = false
-                                onUseDevice()
-                            }
-                        )
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                        cities.forEach { city ->
-                            DropdownMenuItem(
-                                text = { Text(city.name, color = Color.White) },
-                                onClick = {
-                                    expanded = false
-                                    onSetManual(city.lat, city.lng, city.name)
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
-            ) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-data class City(val name: String, val lat: Double, val lng: Double)

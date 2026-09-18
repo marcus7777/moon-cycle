@@ -9,7 +9,10 @@ import com.example.moon.domain.repository.AstronomyRepository
 import com.example.moon.domain.repository.LocationRepository
 import com.example.moon.domain.manager.WallpaperManager
 import com.example.moon.domain.repository.NoteRepository
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -270,7 +273,11 @@ class MoonViewModel(
             // Observe updates
             locationRepository.getLocationUpdates().collect { location ->
                 _locationData.value = location
-                val updated = moonDataProvider.getMoonData()
+                
+                // Recalculate moon data using the fresh location immediately
+                val now = kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+                val updated = astronomyRepository.getMoonData(now, location)
+                
                 _moonData.value = updated
                 _lastKnownMoonData.value = updated
                 

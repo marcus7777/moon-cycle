@@ -8,7 +8,7 @@ import com.example.moon.domain.model.MoonPhase
 
 object IconManager {
 
-    private val phaseToAlias = mapOf(
+    private val phaseToAliasN = mapOf(
         MoonPhase.NEW to "com.example.moon.MainActivityNewMoon",
         MoonPhase.WAXING_CRESCENT to "com.example.moon.MainActivityWaxingCrescent",
         MoonPhase.FIRST_QUARTER to "com.example.moon.MainActivityFirstQuarter",
@@ -19,10 +19,23 @@ object IconManager {
         MoonPhase.WANING_CRESCENT to "com.example.moon.MainActivityWaningCrescent"
     )
 
-    fun updateIconForPhase(context: Context, currentPhase: MoonPhase) {
-        val targetAlias = phaseToAlias[currentPhase] ?: return
-        val packageManager = context.packageManager
+    private val phaseToAliasS = mapOf(
+        MoonPhase.NEW to "com.example.moon.MainActivityNewMoonS",
+        MoonPhase.WAXING_CRESCENT to "com.example.moon.MainActivityWaxingCrescentS",
+        MoonPhase.FIRST_QUARTER to "com.example.moon.MainActivityFirstQuarterS",
+        MoonPhase.WAXING_GIBBOUS to "com.example.moon.MainActivityWaxingGibbousS",
+        MoonPhase.FULL to "com.example.moon.MainActivityFullMoonS",
+        MoonPhase.WANING_GIBBOUS to "com.example.moon.MainActivityWaningGibbousS",
+        MoonPhase.LAST_QUARTER to "com.example.moon.MainActivityLastQuarterS",
+        MoonPhase.WANING_CRESCENT to "com.example.moon.MainActivityWaningCrescentS"
+    )
 
+    fun updateIconForPhase(context: Context, currentPhase: MoonPhase, latitude: Double) {
+        val isSouthern = latitude < 0
+        val targetAlias = if (isSouthern) phaseToAliasS[currentPhase] else phaseToAliasN[currentPhase]
+        if (targetAlias == null) return
+
+        val packageManager = context.packageManager
         val componentName = ComponentName(context.packageName, targetAlias)
 
         // If already enabled, do nothing
@@ -38,8 +51,9 @@ object IconManager {
             PackageManager.DONT_KILL_APP
         )
 
-        // Disable all other aliases
-        phaseToAlias.values.filter { it != targetAlias }.forEach { alias ->
+        // Disable all other aliases (both N and S)
+        val allAliases = phaseToAliasN.values + phaseToAliasS.values
+        allAliases.filter { it != targetAlias }.forEach { alias ->
             packageManager.setComponentEnabledSetting(
                 ComponentName(context.packageName, alias),
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
