@@ -21,6 +21,7 @@ class LocationRepositoryImpl(
     private val manualLocation = MutableStateFlow<LocationData?>(loadManualLocation())
 
     private fun loadManualLocation(): LocationData? {
+        if (prefs.getBoolean("use_device", true)) return null
         if (!prefs.contains("manual_lat")) return null
         return LocationData(
             latitude = prefs.getFloat("manual_lat", 0f).toDouble(),
@@ -33,10 +34,12 @@ class LocationRepositoryImpl(
     private fun saveManualLocation(data: LocationData?) {
         prefs.edit().apply {
             if (data != null) {
+                putBoolean("use_device", false)
                 putFloat("manual_lat", data.latitude.toFloat())
                 putFloat("manual_lng", data.longitude.toFloat())
                 putString("manual_name", data.name)
             } else {
+                putBoolean("use_device", true)
                 remove("manual_lat")
                 remove("manual_lng")
                 remove("manual_name")

@@ -69,7 +69,7 @@ fun CalendarScreen(
     
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.Black,
+        containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Box(
@@ -118,7 +118,8 @@ fun CalendarScreen(
 
             HorizontalPager(
                 state = pagerState,
-                userScrollEnabled = false,
+                userScrollEnabled = true, // Allow user scrolling for smoother feel
+                beyondViewportPageCount = 1, // Keep other page ready for smooth transition
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 when (page) {
@@ -133,6 +134,7 @@ fun CalendarScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .statusBarsPadding()
+                                    .background(Color.Transparent) // Ensure transparent
                             ) {
                                 // Elegant header bar for full screen view
                                 Row(
@@ -240,6 +242,7 @@ fun CalendarScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .statusBarsPadding()
+                                .background(Color.Transparent) // Ensure transparent
                                 .padding(24.dp)
                         ) {
                             Row(

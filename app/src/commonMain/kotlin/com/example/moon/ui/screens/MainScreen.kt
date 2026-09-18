@@ -40,6 +40,7 @@ fun MainScreen(
     onShowCalendar: (initialPage: Int) -> Unit,
     onSetManualLocation: (Double, Double, String?) -> Unit,
     onUseDeviceLocation: () -> Unit,
+    onRequestLocationPermission: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var hasSwipedInThisGesture by remember { mutableStateOf(false) }
@@ -244,14 +245,17 @@ fun MainScreen(
 
     if (showLocationDialog) {
         LocationPickerDialog(
+            locationData = locationData,
             onDismiss = { showLocationDialog = false },
             onSetManual = { lat, lng, name ->
                 onSetManualLocation(lat, lng, name)
                 showLocationDialog = false
             },
             onUseDevice = {
-                onUseDeviceLocation()
-                showLocationDialog = false
+                onRequestLocationPermission {
+                    onUseDeviceLocation()
+                    showLocationDialog = false
+                }
             }
         )
     }
@@ -259,12 +263,22 @@ fun MainScreen(
 
 @Composable
 fun LocationPickerDialog(
+    locationData: LocationData,
     onDismiss: () -> Unit,
     onSetManual: (Double, Double, String?) -> Unit,
     onUseDevice: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedCityName by remember { mutableStateOf("Select a City") }
+    
+    val selectedCityName = if (locationData.isDefault && locationData.name == "London") {
+        "Select a City"
+    } else if (!locationData.isDefault && locationData.name != null) {
+        locationData.name
+    } else if (!locationData.isDefault) {
+         "Current Location"
+    } else {
+        "Select a City"
+    }
 
     val cities = listOf(
         City("London", 51.5074, -0.1278),
@@ -313,7 +327,7 @@ fun LocationPickerDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = selectedCityName, color = if (selectedCityName == "Select a City") Color.Gray else Color.White)
+                        Text(text = selectedCityName ?: "Select a City", color = if (selectedCityName == "Select a City") Color.Gray else Color.White)
                         Icon(
                             imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                             contentDescription = null,
@@ -328,11 +342,24 @@ fun LocationPickerDialog(
                             .fillMaxWidth(0.8f)
                             .background(Color(0xFF2C2C2C))
                     ) {
+                        DropdownMenuItem(
+                            text = { 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.MyLocation, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Use My Current Location", color = Color.White)
+                                }
+                            },
+                            onClick = {
+                                expanded = false
+                                onUseDevice()
+                            }
+                        )
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                         cities.forEach { city ->
                             DropdownMenuItem(
                                 text = { Text(city.name, color = Color.White) },
                                 onClick = {
-                                    selectedCityName = city.name
                                     expanded = false
                                     onSetManual(city.lat, city.lng, city.name)
                                 }
@@ -342,18 +369,7 @@ fun LocationPickerDialog(
                 }
             }
         },
-        confirmButton = {
-            TextButton(
-                onClick = onUseDevice,
-                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Use My Location")
-                }
-            }
-        },
+        confirmButton = {},
         dismissButton = {
             TextButton(
                 onClick = onDismiss,

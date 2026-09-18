@@ -41,7 +41,10 @@ fun MoonNavigation(
     locationRepository: LocationRepository,
     astronomyRepository: AstronomyRepository,
     wallpaperManager: WallpaperManager? = null,
-    noteRepository: NoteRepository? = null
+    noteRepository: NoteRepository? = null,
+    onDownloadFile: (content: String, mimeType: String, fileName: String) -> Unit = { _, _, _ -> },
+    onUploadFile: (mimeType: String, onRead: (String) -> Unit) -> Unit = { _, _ -> },
+    onRequestLocationPermission: (() -> Unit) -> Unit = { _ -> }
 ) {
     val backStack = remember { mutableStateListOf<NavKey>(MoonHome) }
     
@@ -87,7 +90,8 @@ fun MoonNavigation(
                             backStack.add(MoonCalendar(initialPage = initialPage))
                         },
                         onSetManualLocation = { lat, lng, name -> viewModel.setManualLocation(lat, lng, name) },
-                        onUseDeviceLocation = { viewModel.useDeviceLocation() }
+                        onUseDeviceLocation = { viewModel.useDeviceLocation() },
+                        onRequestLocationPermission = onRequestLocationPermission
                     )
                 }
             }
@@ -103,10 +107,22 @@ fun MoonNavigation(
                         isWallpaperScheduled = isWallpaperScheduled,
                         onToggleWallpaperSchedule = { viewModel.toggleWallpaperSchedule(it) },
                         onUpdateWallpaperNow = { viewModel.updateWallpaperNow() },
-                        onExportJsonl = { viewModel.exportNotesJsonl() },
-                        onImportJsonl = { text, callback -> viewModel.importNotesJsonl(text, callback) },
-                        onExportICal = { viewModel.exportNotesICal() },
-                        onImportICal = { text, callback -> viewModel.importNotesICal(text, callback) }
+                        onDownloadJsonl = { 
+                            onDownloadFile(viewModel.exportNotesJsonl(), "application/jsonl", "moon_notes.jsonl") 
+                        },
+                        onUploadJsonl = { callback ->
+                            onUploadFile("application/jsonl") { text ->
+                                viewModel.importNotesJsonl(text, callback)
+                            }
+                        },
+                        onDownloadICal = { 
+                            onDownloadFile(viewModel.exportNotesICal(), "text/calendar", "lunar_notes.ics") 
+                        },
+                        onUploadICal = { callback ->
+                            onUploadFile("text/calendar") { text ->
+                                viewModel.importNotesICal(text, callback)
+                            }
+                        }
                     )
                 }
             }
