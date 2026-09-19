@@ -14,11 +14,12 @@ import androidx.compose.runtime.remember
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.moon.data.manager.AndroidWallpaperManager
-import com.example.moon.data.repository.AstronomyRepositoryImpl
-import com.example.moon.data.repository.LocationRepositoryImpl
-import com.example.moon.data.repository.NoteRepositoryImpl
-import com.example.moon.ui.navigation.MoonNavigation
-import com.example.moon.ui.theme.MoonCycleTheme
+import com.example.moon.core.data.repository.AstronomyRepositoryImpl
+import com.example.moon.core.data.repository.LocationRepositoryImpl
+import com.example.moon.core.data.repository.NoteRepositoryImpl
+import com.example.moon.core.data.provider.MoonDataProviderImpl
+import com.example.moon.feature.navigation.MoonNavigation
+import com.example.moon.core.ui.theme.MoonCycleTheme
 import com.example.moon.util.IconManager
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.MainScope
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
             LocationServices.getFusedLocationProviderClient(this)
         )
         val astronomyRepository = AstronomyRepositoryImpl()
+        val moonDataProvider = MoonDataProviderImpl(locationRepository, astronomyRepository)
         val wallpaperManager = AndroidWallpaperManager(this)
         val noteRepository = NoteRepositoryImpl(this)
         
@@ -137,6 +139,7 @@ class MainActivity : ComponentActivity() {
                 MoonNavigation(
                     locationRepository = locationRepository,
                     astronomyRepository = astronomyRepository,
+                    moonDataProvider = moonDataProvider,
                     wallpaperManager = wallpaperManager,
                     noteRepository = noteRepository,
                     onDownloadFile = { content, mimeType, fileName ->

@@ -12,14 +12,17 @@ plugins {
 kotlin {
     androidTarget()
     
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
-    
     sourceSets {
         val commonMain by getting {
             dependencies {
+                implementation(project(":core:domain"))
+                implementation(project(":core:data"))
+                implementation(project(":core:ui"))
+                implementation(project(":feature:main"))
+                implementation(project(":feature:calendar"))
+                implementation(project(":feature:details"))
+                implementation(project(":feature:navigation"))
+
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
@@ -59,11 +62,6 @@ kotlin {
                 implementation(libs.androidx.datastore.preferences.impl)
                 implementation(libs.androidx.core.splashscreen)
                 implementation(libs.androidx.work.runtime.ktx)
-            }
-        }
-        
-        val wasmJsMain by getting {
-            dependencies {
             }
         }
         

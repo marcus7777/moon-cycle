@@ -24,4 +24,11 @@ dependencyResolutionManagement {
 
 rootProject.name = "moon-cycle"
 include(":app")
+include(":core:domain")
+include(":core:data")
+include(":core:ui")
+include(":feature:main")
+include(":feature:calendar")
+include(":feature:details")
+include(":feature:navigation")
  
