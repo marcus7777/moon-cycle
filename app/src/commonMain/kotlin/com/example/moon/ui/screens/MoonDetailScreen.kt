@@ -1,14 +1,13 @@
 package com.example.moon.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Wallpaper
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Upload
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +35,9 @@ fun MoonDetailScreen(
     onUploadJsonl: ((Boolean) -> Unit) -> Unit = { _ -> },
     onDownloadICal: () -> Unit = {},
     onUploadICal: ((Boolean) -> Unit) -> Unit = { _ -> },
+    onSetManualLocation: (Double, Double, String?) -> Unit = { _, _, _ -> },
+    onUseDeviceLocation: () -> Unit = {},
+    onRequestLocationPermission: (() -> Unit) -> Unit = { _ -> },
     modifier: Modifier = Modifier,
     locationData: LocationData = LocationData(latitude = 51.5074, longitude = -0.1278)
 ) {
@@ -57,6 +59,7 @@ fun MoonDetailScreen(
 
     var importStatusMessage by remember { mutableStateOf("") }
     var showStatusDialog by remember { mutableStateOf(false) }
+    var showLocationDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
@@ -128,6 +131,23 @@ fun MoonDetailScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    // Location selection item
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showLocationDialog = true }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Text(text = "Viewing From", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val locText = locationData.name ?: if (locationData.isDefault && locationData.latitude == 51.5074) "London" else if (!locationData.isDefault) "Current Location" else "Custom Location"
+                            Text(text = locText, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(Icons.Rounded.Edit, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(top = 8.dp), thickness = 0.5.dp, color = Color.DarkGray)
+                    }
+
                     DetailItem("Phase", moonData.phase.description)
                     DetailItem("Illumination", "${(moonData.illumination * 100).toInt()}%")
                     DetailItem("Age", "${formatOneDecimal(moonData.age)} days")
@@ -316,7 +336,146 @@ fun MoonDetailScreen(
             }
         )
     }
+
+    if (showLocationDialog) {
+        LocationPickerDialog(
+            locationData = locationData,
+            onDismiss = { showLocationDialog = false },
+            onSetManual = { lat, lng, name ->
+                onSetManualLocation(lat, lng, name)
+                showLocationDialog = false
+            },
+            onUseDevice = {
+                onRequestLocationPermission {
+                    onUseDeviceLocation()
+                    showLocationDialog = false
+                }
+            }
+        )
+    }
 }
+
+@Composable
+fun LocationPickerDialog(
+    locationData: LocationData,
+    onDismiss: () -> Unit,
+    onSetManual: (Double, Double, String?) -> Unit,
+    onUseDevice: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    val selectedCityName = if (locationData.isDefault && locationData.name == "London") {
+        "Select a City"
+    } else if (!locationData.isDefault && locationData.name != null) {
+        locationData.name
+    } else if (!locationData.isDefault) {
+         "Current Location"
+    } else {
+        "Select a City"
+    }
+
+    val cities = listOf(
+        City("London", 51.5074, -0.1278),
+        City("New York", 40.7128, -74.0060),
+        City("Tokyo", 35.6762, 139.6503),
+        City("Sydney", -33.8688, 151.2093),
+        City("Berlin", 52.5200, 13.4050),
+        City("Dubai", 25.2048, 55.2708),
+        City("Los Angeles", 34.0522, -118.2437),
+        City("Paris", 48.8566, 2.3522),
+        City("Mumbai", 19.0760, 72.8777),
+        City("São Paulo", -23.5505, -46.6333),
+        City("Cairo", 30.0444, 31.2357),
+        City("Cape Town", -33.9249, 18.4241),
+        City("Moscow", 55.7558, 37.6173),
+        City("Beijing", 39.9042, 116.4074),
+        City("Singapore", 1.3521, 103.8198),
+        City("Bangkok", 13.7563, 100.5018),
+        City("Mexico City", 19.4326, -99.1332),
+        City("Seoul", 37.5665, 126.9780),
+        City("Toronto", 43.6532, -79.3832),
+        City("Madrid", 40.4168, -3.7038)
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1A1A1A), // Dark mode background
+        titleContentColor = Color.White,
+        textContentColor = Color.LightGray,
+        title = { Text("Update Location") },
+        text = {
+            Column {
+                Text("Select a major city to view the moon from that location.")
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // City Dropdown
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White.copy(alpha = 0.05f), MaterialTheme.shapes.small)
+                        .clickable { expanded = true }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = selectedCityName ?: "Select a City", color = if (selectedCityName == "Select a City") Color.Gray else Color.White)
+                        Icon(
+                            imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
+                    
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .background(Color(0xFF2C2C2C))
+                    ) {
+                        DropdownMenuItem(
+                            text = { 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.MyLocation, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Use My Current Location", color = Color.White)
+                                }
+                            },
+                            onClick = {
+                                expanded = false
+                                onUseDevice()
+                            }
+                        )
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                        cities.forEach { city ->
+                            DropdownMenuItem(
+                                text = { Text(city.name, color = Color.White) },
+                                onClick = {
+                                    expanded = false
+                                    onSetManual(city.lat, city.lng, city.name)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+data class City(val name: String, val lat: Double, val lng: Double)
 
 private fun formatOneDecimal(v: Double): String {
     val rounded = kotlin.math.round(v * 10) / 10.0

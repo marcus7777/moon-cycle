@@ -88,10 +88,7 @@ fun MoonNavigation(
                         },
                         onShowCalendar = { initialPage ->
                             backStack.add(MoonCalendar(initialPage = initialPage))
-                        },
-                        onSetManualLocation = { lat, lng, name -> viewModel.setManualLocation(lat, lng, name) },
-                        onUseDeviceLocation = { viewModel.useDeviceLocation() },
-                        onRequestLocationPermission = onRequestLocationPermission
+                        }
                     )
                 }
             }
@@ -122,7 +119,10 @@ fun MoonNavigation(
                             onUploadFile("text/calendar") { text ->
                                 viewModel.importNotesICal(text, callback)
                             }
-                        }
+                        },
+                        onSetManualLocation = { lat, lng, name -> viewModel.setManualLocation(lat, lng, name) },
+                        onUseDeviceLocation = { viewModel.useDeviceLocation() },
+                        onRequestLocationPermission = onRequestLocationPermission
                     )
                 }
             }
