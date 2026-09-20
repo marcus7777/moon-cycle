@@ -44,6 +44,8 @@ fun CalendarScreen(
     initialPage: Int = 0,
     onInteraction: () -> Unit = {},
     onBack: () -> Unit,
+    onExportEvents: (String) -> Unit = {},
+    onExportNotes: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val viewModel: CalendarViewModel = viewModel {
@@ -152,7 +154,9 @@ fun CalendarScreen(
                                                 year = uiState.selectedYear,
                                                 month = uiState.selectedMonth,
                                                 onPreviousMonth = { viewModel.previousMonth(locationData) },
-                                                onNextMonth = { viewModel.nextMonth(locationData) }
+                                                onNextMonth = { viewModel.nextMonth(locationData) },
+                                                onExportEvents = { onExportEvents(viewModel.getIcsExportContent(locationData)) },
+                                                onExportNotes = { onExportNotes(viewModel.getNotesExportContent()) }
                                             )
                                             
                                             CalendarGrid(
@@ -175,7 +179,9 @@ fun CalendarScreen(
                                         year = uiState.selectedYear,
                                         month = uiState.selectedMonth,
                                         onPreviousMonth = { viewModel.previousMonth(locationData) },
-                                        onNextMonth = { viewModel.nextMonth(locationData) }
+                                        onNextMonth = { viewModel.nextMonth(locationData) },
+                                        onExportEvents = { onExportEvents(viewModel.getIcsExportContent(locationData)) },
+                                        onExportNotes = { onExportNotes(viewModel.getNotesExportContent()) }
                                     )
                                     
                                     CalendarGrid(
@@ -280,9 +286,12 @@ fun MonthHeader(
     year: Int,
     month: Int,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onNextMonth: () -> Unit,
+    onExportEvents: () -> Unit = {},
+    onExportNotes: () -> Unit = {}
 ) {
     val monthName = Month(month).name.lowercase().replaceFirstChar { it.uppercase() }
+    var showMenu by remember { mutableStateOf(false) }
     
     Row(
         modifier = Modifier
@@ -291,19 +300,54 @@ fun MonthHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPreviousMonth, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Previous Month", tint = Color.White)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onPreviousMonth, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Previous Month", tint = Color.White)
+            }
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Text(
+                text = "$monthName $year",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            IconButton(onClick = onNextMonth, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "Next Month", tint = Color.White)
+            }
         }
         
-        Text(
-            text = "$monthName $year",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        
-        IconButton(onClick = onNextMonth, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "Next Month", tint = Color.White)
+        Box {
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Rounded.MoreVert, contentDescription = "Export Options", tint = Color.White)
+            }
+            
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Export Month Events (.ics)") },
+                    onClick = {
+                        showMenu = false
+                        onExportEvents()
+                    },
+                    leadingIcon = { Icon(Icons.Rounded.CalendarToday, contentDescription = null) }
+                )
+                DropdownMenuItem(
+                    text = { Text("Export All Notes (.jsonl)") },
+                    onClick = {
+                        showMenu = false
+                        onExportNotes()
+                    },
+                    leadingIcon = { Icon(Icons.Rounded.Description, contentDescription = null) }
+                )
+            }
         }
     }
 }

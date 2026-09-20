@@ -102,7 +102,13 @@ fun MoonNavigation(
                     noteRepository = noteRepository,
                     initialPage = calendarOverlay.initialPage,
                     onInteraction = { resetNavigationIdleTimer() },
-                    onBack = { currentOverlay = null }
+                    onBack = { currentOverlay = null },
+                    onExportEvents = { content ->
+                        onDownloadFile(content, "text/calendar", "moon_events.ics")
+                    },
+                    onExportNotes = { content ->
+                        onDownloadFile(content, "application/jsonl", "moon_notes.jsonl")
+                    }
                 )
             }
         }

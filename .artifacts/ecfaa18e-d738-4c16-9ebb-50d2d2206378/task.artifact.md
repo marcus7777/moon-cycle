@@ -2,7 +2,7 @@
 - [x] Modify `NoteRepository.kt` interface
 - [x] Implement `exportAllNotesAsJsonl()` in `NoteRepositoryImpl.kt`
 - [x] Update `CalendarViewModel.kt` with basic export methods
-- [/] Update `IcsExporter.kt` with GEO support and fixes
-- [ ] Update `CalendarViewModel.kt` to pass LocationData
-- [ ] Update `CalendarScreen.kt` with Export UI and Intent handling
-- [ ] Verify exports (ICS and JSONL)
+- [x] Update `IcsExporter.kt` with GEO support and fixes
+- [x] Update `CalendarViewModel.kt` to pass LocationData
+- [x] Update `CalendarScreen.kt` with Export UI and Intent handling
+- [x] Verify exports (ICS and JSONL)
