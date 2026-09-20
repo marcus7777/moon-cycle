@@ -1,0 +1,8 @@
+{
+  "buildPath": ":",
+  "projectPath": ":feature:details",
+  "moduleId": {
+    "groupId": "moon-cycle.feature",
+    "moduleId": "details"
+  }
+}

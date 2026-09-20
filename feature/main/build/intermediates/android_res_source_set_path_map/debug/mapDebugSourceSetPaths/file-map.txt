@@ -1,0 +1,11 @@
+com.example.moon.feature.main-pngs-0 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\build\generated\res\pngs\debug
+com.example.moon.feature.main-updated_navigation_xml-1 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\build\generated\updated_navigation_xml\debug
+com.example.moon.feature.main-mergeDebugResources-2 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\build\intermediates\incremental\debug\mergeDebugResources\merged.dir
+com.example.moon.feature.main-mergeDebugResources-3 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\build\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+com.example.moon.feature.main-debug-4 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.moon.feature.main-debug-5 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.moon.feature.main-androidDebug-6 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\src\androidDebug\res
+com.example.moon.feature.main-androidMain-7 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\src\androidMain\res
+com.example.moon.feature.main-debug-8 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\src\debug\res
+com.example.moon.feature.main-main-9 C:\Users\marcu\AndroidStudioProjects\moon\feature\main\src\main\res
+gradleHome-0 C:\Users\marcu\.gradle

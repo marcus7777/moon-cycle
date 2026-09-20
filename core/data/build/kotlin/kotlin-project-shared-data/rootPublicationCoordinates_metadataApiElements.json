@@ -1,0 +1,8 @@
+{
+  "buildPath": ":",
+  "projectPath": ":core:data",
+  "moduleId": {
+    "groupId": "moon-cycle.core",
+    "moduleId": "data"
+  }
+}

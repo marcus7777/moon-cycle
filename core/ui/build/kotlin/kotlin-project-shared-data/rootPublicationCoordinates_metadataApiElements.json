@@ -1,0 +1,8 @@
+{
+  "buildPath": ":",
+  "projectPath": ":core:ui",
+  "moduleId": {
+    "groupId": "moon-cycle.core",
+    "moduleId": "ui"
+  }
+}

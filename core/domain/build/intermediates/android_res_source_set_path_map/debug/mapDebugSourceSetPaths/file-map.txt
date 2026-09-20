@@ -1,0 +1,11 @@
+com.example.moon.core.domain-pngs-0 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\build\generated\res\pngs\debug
+com.example.moon.core.domain-updated_navigation_xml-1 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\build\generated\updated_navigation_xml\debug
+com.example.moon.core.domain-mergeDebugResources-2 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\build\intermediates\incremental\debug\mergeDebugResources\merged.dir
+com.example.moon.core.domain-mergeDebugResources-3 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\build\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+com.example.moon.core.domain-debug-4 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.moon.core.domain-debug-5 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.moon.core.domain-androidDebug-6 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\src\androidDebug\res
+com.example.moon.core.domain-androidMain-7 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\src\androidMain\res
+com.example.moon.core.domain-debug-8 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\src\debug\res
+com.example.moon.core.domain-main-9 C:\Users\marcu\AndroidStudioProjects\moon\core\domain\src\main\res
+gradleHome-0 C:\Users\marcu\.gradle
