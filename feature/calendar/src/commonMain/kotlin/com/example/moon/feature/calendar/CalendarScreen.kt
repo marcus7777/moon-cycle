@@ -485,7 +485,7 @@ fun EventList(
                     Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "View Moon Settings & Details",
+                        text = "Details",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
                     )

@@ -450,47 +450,11 @@
         (err) => {
           alert('Could not retrieve device location: ' + err.message);
         },
-        { timeout: 10000, enableHighAccuracy: true }
+        { timeout: 15000, enableHighAccuracy: true }
       );
     } else {
       alert('Geolocation is not supported by your browser.');
     }
-  }
-
-  // Swipe Gesture Handling (Horizontal swipe)
-  let touchStartX = 0;
-  let touchStartY = 0;
-
-  function initSwipeGestures() {
-    document.addEventListener('touchstart', (e) => {
-      touchStartX = e.changedTouches[0].screenX;
-      touchStartY = e.changedTouches[0].screenY;
-      if (state.activeScreen === 'main') {
-        showUiWithTimer();
-      }
-    }, { passive: true });
-
-    document.addEventListener('touchend', (e) => {
-      const touchEndX = e.changedTouches[0].screenX;
-      const touchEndY = e.changedTouches[0].screenY;
-      const dx = touchEndX - touchStartX;
-      const dy = touchEndY - touchStartY;
-
-      // Ensure horizontal swipe dominates
-      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        if (dx < -60) {
-          // Swipe Left -> Open Calendar from Main
-          if (state.activeScreen === 'main') {
-            navigateTo('calendar');
-          }
-        } else if (dx > 60) {
-          // Swipe Right -> Back to Main
-          if (state.activeScreen === 'calendar' || state.activeScreen === 'details') {
-            navigateTo('main');
-          }
-        }
-      }
-    }, { passive: true });
   }
 
   // Keyboard Shortcuts
@@ -595,7 +559,6 @@
   function init() {
     populateCities();
     initEvents();
-    initSwipeGestures();
     initKeyboard();
     updateMoon();
     resetIdleTimer();
