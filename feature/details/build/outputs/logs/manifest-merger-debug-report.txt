@@ -1,16 +1,16 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml:2:13-83
-INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml:2:13-83
+ADDED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml:2:13-83
+INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml:2:13-83
 	package
-		INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml
+		INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml
 	xmlns:android
-		ADDED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml:2:23-81
+		ADDED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml:2:23-81
 uses-sdk
-INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml reason: use-sdk injection requested
-INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml
-INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml
+INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml reason: use-sdk injection requested
+INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml
+INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml
 	android:targetSdkVersion
-		INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml
+		INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml
 	android:minSdkVersion
-		INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest15916068879815530243.xml
+		INJECTED from C:\Users\marcu\AndroidStudioProjects\moon\feature\details\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16316613995393070903.xml

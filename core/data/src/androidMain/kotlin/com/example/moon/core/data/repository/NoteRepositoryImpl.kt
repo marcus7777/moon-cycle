@@ -125,7 +125,8 @@ class NoteRepositoryImpl(context: Context) : NoteRepository {
             append("\"calendarDay\":\"").append(escape(entry.calendarDay)).append("\",")
             append("\"dateWritten\":\"").append(escape(entry.dateWritten)).append("\",")
             append("\"lastUpdated\":\"").append(escape(entry.lastUpdated)).append("\"")
-            if (entry.geohash != null) append(",\"geohash\":\"").append(escape(entry.geohash)).append("\"")
+            val geohash = entry.geohash
+            if (geohash != null) append(",\"geohash\":\"").append(escape(geohash)).append("\"")
             append("}")
         }
     }

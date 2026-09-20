@@ -2,7 +2,7 @@ package com.example.moon.data.manager
 
 import android.content.Context
 import androidx.work.*
-import com.example.moon.domain.manager.WallpaperManager
+import com.example.moon.core.domain.manager.WallpaperManager
 import com.example.moon.worker.WallpaperWorker
 import java.util.concurrent.TimeUnit
 

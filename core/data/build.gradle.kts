@@ -13,6 +13,7 @@ kotlin {
                 implementation(libs.kastro)
                 implementation(libs.androidx.datastore.preferences.core)
                 implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.datetime)
             }
         }
         val androidMain by getting {

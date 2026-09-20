@@ -17,6 +17,7 @@ kotlin {
                 implementation(compose.foundation)
                 implementation(compose.material3)
                 implementation(compose.ui)
+                implementation(libs.androidx.compose.material.icons.extended)
                 implementation(libs.androidx.lifecycle.viewmodel.compose)
                 implementation(libs.androidx.lifecycle.runtime.compose)
                 implementation(libs.kotlinx.datetime)

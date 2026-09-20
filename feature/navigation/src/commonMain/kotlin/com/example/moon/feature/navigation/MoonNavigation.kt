@@ -66,7 +66,6 @@ fun MoonNavigation(
     val moonData by mainViewModel.moonData.collectAsState()
     val locationData by mainViewModel.locationData.collectAsState()
     val isTextVisible by mainViewModel.isTextVisible.collectAsState()
-    val showSwipeHint by mainViewModel.showSwipeHint.collectAsState()
     val isWallpaperScheduled by detailsViewModel.isWallpaperScheduled.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -74,16 +73,14 @@ fun MoonNavigation(
             moonData = moonData,
             locationData = locationData,
             isTextVisible = isTextVisible,
-            showSwipeHint = showSwipeHint,
-            onDismissSwipeHint = { mainViewModel.dismissSwipeHint() },
             onToggleTextVisibility = { mainViewModel.toggleTextVisibility() },
             onInteraction = { mainViewModel.showTextWithTimer() },
             onShowDetails = {
                 currentOverlay = Overlay.Details
                 resetNavigationIdleTimer()
             },
-            onShowCalendar = { initialPage ->
-                currentOverlay = Overlay.Calendar(initialPage)
+            onShowCalendar = {
+                currentOverlay = Overlay.Calendar
                 resetNavigationIdleTimer()
             }
         )
@@ -93,24 +90,17 @@ fun MoonNavigation(
             enter = slideInVertically { it },
             exit = slideOutVertically { it }
         ) {
-            val calendarOverlay = currentOverlay as? Overlay.Calendar
-            if (calendarOverlay != null) {
-                CalendarScreen(
-                    modifier = Modifier.graphicsLayer { alpha = navigationAlpha },
-                    locationData = locationData,
-                    moonData = moonData,
-                    noteRepository = noteRepository,
-                    initialPage = calendarOverlay.initialPage,
-                    onInteraction = { resetNavigationIdleTimer() },
-                    onBack = { currentOverlay = null },
-                    onExportEvents = { content ->
-                        onDownloadFile(content, "text/calendar", "moon_events.ics")
-                    },
-                    onExportNotes = { content ->
-                        onDownloadFile(content, "application/jsonl", "moon_notes.jsonl")
-                    }
-                )
-            }
+            CalendarScreen(
+                modifier = Modifier.graphicsLayer { alpha = navigationAlpha },
+                locationData = locationData,
+                noteRepository = noteRepository,
+                onInteraction = { resetNavigationIdleTimer() },
+                onBack = { currentOverlay = null },
+                onShowDetails = {
+                    currentOverlay = Overlay.Details
+                    resetNavigationIdleTimer()
+                }
+            )
         }
 
         AnimatedVisibility(
@@ -152,6 +142,6 @@ fun MoonNavigation(
 }
 
 sealed class Overlay {
-    data class Calendar(val initialPage: Int) : Overlay()
+    object Calendar : Overlay()
     object Details : Overlay()
 }

@@ -56,7 +56,8 @@ class MoonDetailViewModel(
                     append("\"calendarDay\":\"").append(escape(entry.calendarDay)).append("\",")
                     append("\"dateWritten\":\"").append(escape(entry.dateWritten)).append("\",")
                     append("\"lastUpdated\":\"").append(escape(entry.lastUpdated)).append("\"")
-                    if (entry.geohash != null) append(",\"geohash\":\"").append(escape(entry.geohash)).append("\"")
+                    val geohash = entry.geohash
+                    if (geohash != null) append(",\"geohash\":\"").append(escape(geohash)).append("\"")
                     append("}")
                 }
             }
@@ -89,13 +90,14 @@ class MoonDetailViewModel(
                 append("DESCRIPTION:").append(entry.text.replace("\n", "\\n").replace("\r", "\\r")).append("\n")
                 append("DTSTART;VALUE=DATE:").append(dayClean).append("\n")
                 append("DTEND;VALUE=DATE:").append(dayClean).append("\n")
-                if (entry.geohash != null) {
-                    append("LOCATION:Geohash ").append(entry.geohash).append("\n")
+                val geohash = entry.geohash
+                if (geohash != null) {
+                    append("LOCATION:Geohash ").append(geohash).append("\n")
                 }
                 append("END:VEVENT\n")
             }
 
-            val currentLoc = locationRepository.DEFAULT_LOCATION // Simplified for export
+            val currentLoc = LocationRepository.DEFAULT_LOCATION // Simplified for export
             var currentDay = LocalDate(2026, 9, 17)
             val endDay = LocalDate(2031, 9, 17)
             

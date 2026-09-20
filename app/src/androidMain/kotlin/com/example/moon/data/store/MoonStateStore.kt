@@ -1,8 +1,8 @@
 package com.example.moon.data.store
 
 import android.content.Context
-import com.example.moon.domain.model.MoonData
-import com.example.moon.domain.model.MoonPhase
+import com.example.moon.core.domain.model.MoonData
+import com.example.moon.core.domain.model.MoonPhase
 
 /**
  * A simple storage to persist the last seen moon state for a splash-free launch.

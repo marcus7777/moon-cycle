@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import com.example.moon.R
-import com.example.moon.domain.model.MoonPhase
+import com.example.moon.core.domain.model.MoonPhase
 
 object IconManager {
 
@@ -13,7 +13,7 @@ object IconManager {
         MoonPhase.WAXING_CRESCENT to "com.example.moon.MainActivityWaxingCrescent",
         MoonPhase.FIRST_QUARTER to "com.example.moon.MainActivityFirstQuarter",
         MoonPhase.WAXING_GIBBOUS to "com.example.moon.MainActivityWaxingGibbous",
-        MoonPhase.FULL to "com.example.moon.MainActivity",
+        MoonPhase.FULL to "com.example.moon.MainActivityFullMoon",
         MoonPhase.WANING_GIBBOUS to "com.example.moon.MainActivityWaningGibbous",
         MoonPhase.LAST_QUARTER to "com.example.moon.MainActivityLastQuarter",
         MoonPhase.WANING_CRESCENT to "com.example.moon.MainActivityWaningCrescent"
@@ -37,6 +37,13 @@ object IconManager {
 
         val packageManager = context.packageManager
         val componentName = ComponentName(context.packageName, targetAlias)
+
+        // Always ensure the target activity is enabled
+        packageManager.setComponentEnabledSetting(
+            ComponentName(context.packageName, "com.example.moon.MainActivity"),
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP
+        )
 
         // If already enabled, do nothing
         if (packageManager.getComponentEnabledSetting(componentName) == 

@@ -1,5 +1,6 @@
 package com.example.moon.feature.details
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -62,7 +63,7 @@ fun MoonDetailScreen(
 
     Surface(
         modifier = modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
-        color = Color.Black.copy(alpha = 0.8f) // Semi-transparent as requested
+        color = Color.Black
     ) {
         Column(
             modifier = Modifier

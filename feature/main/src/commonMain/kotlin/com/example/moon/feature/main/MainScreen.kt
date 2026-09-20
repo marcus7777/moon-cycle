@@ -3,7 +3,6 @@ package com.example.moon.feature.main
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -29,15 +28,12 @@ fun MainScreen(
     moonData: MoonData?,
     locationData: LocationData,
     isTextVisible: Boolean,
-    showSwipeHint: Boolean,
-    onDismissSwipeHint: () -> Unit,
     onToggleTextVisibility: () -> Unit,
     onInteraction: () -> Unit,
     onShowDetails: () -> Unit,
-    onShowCalendar: (initialPage: Int) -> Unit,
+    onShowCalendar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var hasSwipedInThisGesture by remember { mutableStateOf(false) }
     var moonVisible by remember { mutableStateOf(false) }
     
     LaunchedEffect(moonData) {
@@ -62,28 +58,6 @@ fun MainScreen(
                         }
                     }
                 }
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { hasSwipedInThisGesture = false },
-                        onDrag = { change, dragAmount ->
-                            if (!hasSwipedInThisGesture) {
-                                if (dragAmount.x < -20) {
-                                    hasSwipedInThisGesture = true
-                                    if (showSwipeHint) onDismissSwipeHint()
-                                    onShowCalendar(1)
-                                } else if (dragAmount.x > 20) {
-                                    hasSwipedInThisGesture = true
-                                    if (showSwipeHint) onDismissSwipeHint()
-                                    onShowCalendar(0)
-                                } else if (dragAmount.y < -20) {
-                                    hasSwipedInThisGesture = true
-                                    onShowDetails()
-                                }
-                            }
-                            change.consume()
-                        }
-                    )
-                }
         ) {
             if (moonData != null) {
                 AnimatedVisibility(
@@ -92,7 +66,12 @@ fun MainScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { 
+                                onInteraction()
+                                onShowCalendar() 
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         MoonVisualization(
@@ -129,7 +108,9 @@ fun MainScreen(
                     ) {
                         if (moonData != null) {
                             Column(
-                                modifier = Modifier.padding(top = 40.dp),
+                                modifier = Modifier
+                                    .padding(top = 40.dp)
+                                    .clickable { onShowDetails() },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
@@ -172,29 +153,6 @@ fun MainScreen(
             if (moonData == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color.White)
-                }
-            }
-
-            AnimatedVisibility(
-                visible = showSwipeHint && isTextVisible,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 120.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Text(
-                        text = "Swipe left for calendar",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
                 }
             }
         }

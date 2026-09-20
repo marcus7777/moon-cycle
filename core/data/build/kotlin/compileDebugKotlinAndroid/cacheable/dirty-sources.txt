@@ -1,6 +1,0 @@
-C:\Users\marcu\AndroidStudioProjects\moon\core\data\src\commonMain\kotlin\com\example\moon\core\data\provider\MoonDataProviderImpl.kt
-C:\Users\marcu\AndroidStudioProjects\moon\core\data\src\androidMain\kotlin\com\example\moon\core\data\repository\LocationRepositoryImpl.kt
-C:\Users\marcu\AndroidStudioProjects\moon\core\data\src\commonMain\kotlin\com\example\moon\core\data\repository\AstronomyRepositoryImpl.kt
-C:\Users\marcu\AndroidStudioProjects\moon\core\data\src\commonMain\kotlin\com\example\moon\core\data\location\LocationProvider.kt
-C:\Users\marcu\AndroidStudioProjects\moon\core\data\src\androidMain\kotlin\com\example\moon\core\data\location\LocationProvider.kt
-C:\Users\marcu\AndroidStudioProjects\moon\core\data\src\androidMain\kotlin\com\example\moon\core\data\repository\NoteRepositoryImpl.kt

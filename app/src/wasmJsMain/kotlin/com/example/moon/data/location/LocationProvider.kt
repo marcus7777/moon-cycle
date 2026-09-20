@@ -1,7 +1,7 @@
 package com.example.moon.data.location
 
-import com.example.moon.domain.model.LocationData
-import com.example.moon.domain.repository.LocationRepository
+import com.example.moon.core.domain.model.LocationData
+import com.example.moon.core.domain.repository.LocationRepository
 
 actual class LocationProvider {
     actual suspend fun getCurrentLocation(): LocationData {
