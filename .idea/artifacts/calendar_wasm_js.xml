@@ -1,0 +1,6 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="calendar-wasm-js">
+    <output-path>$PROJECT_DIR$/feature/calendar/build/libs</output-path>
+    <root id="archive" name="calendar-wasm-js.jar" />
+  </artifact>
+</component>

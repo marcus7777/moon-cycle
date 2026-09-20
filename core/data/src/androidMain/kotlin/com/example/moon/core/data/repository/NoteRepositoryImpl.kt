@@ -80,6 +80,11 @@ class NoteRepositoryImpl(context: Context) : NoteRepository {
         saveNote(date, "", null)
     }
 
+    override fun exportAllNotesAsJsonl(): String {
+        val allNotes = loadAllNotes()
+        return allNotes.joinToString("\n") { encodeNoteEntry(it) }
+    }
+
     override suspend fun importJsonlData(jsonlText: String): Boolean {
         try {
             val lines = jsonlText.split("\n").filter { it.isNotBlank() }

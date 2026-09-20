@@ -11,4 +11,5 @@ interface NoteRepository {
     suspend fun saveNote(date: LocalDate, note: String, locationData: LocationData? = null)
     suspend fun deleteNote(date: LocalDate)
     suspend fun importJsonlData(jsonlText: String): Boolean
+    fun exportAllNotesAsJsonl(): String
 }

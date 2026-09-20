@@ -7,6 +7,7 @@ import com.example.moon.core.domain.model.LocationData
 import com.example.moon.core.domain.model.LunarEvent
 import com.example.moon.core.domain.model.MoonData
 import com.example.moon.core.domain.repository.NoteRepository
+import com.example.moon.core.domain.util.IcsExporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -75,6 +76,14 @@ class CalendarViewModel(
         val prevMonth = if (_uiState.value.selectedMonth == 1) 12 else _uiState.value.selectedMonth - 1
         val prevYear = if (_uiState.value.selectedMonth == 1) _uiState.value.selectedYear - 1 else _uiState.value.selectedYear
         loadEvents(prevYear, prevMonth, location)
+    }
+
+    fun getIcsExportContent(location: LocationData): String {
+        return IcsExporter.generateIcs(_uiState.value.events, location)
+    }
+
+    fun getNotesExportContent(): String {
+        return noteRepository?.exportAllNotesAsJsonl() ?: ""
     }
 }
 
