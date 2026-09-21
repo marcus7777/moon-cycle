@@ -71,6 +71,96 @@ class AstronomyRepositoryImpl : AstronomyRepository {
     }
 
     @OptIn(kotlin.time.ExperimentalTime::class)
+    override fun getLunarEvents(year: Int, month: Int, location: LocationData): List<LunarEvent> {
+        val startInstant = LocalDateTime(year, month, 1, 0, 0).toInstant(TimeZone.currentSystemDefault())
+        val endInstant = if (month == 12) {
+            LocalDateTime(year + 1, 1, 1, 0, 0)
+        } else {
+            LocalDateTime(year, month + 1, 1, 0, 0)
+        }.toInstant(TimeZone.currentSystemDefault())
+
+        return getLunarEventsInRangeInternal(startInstant, endInstant, location)
+    }
+
+    @OptIn(kotlin.time.ExperimentalTime::class)
+    override fun getLunarEventsInRange(start: LocalDateTime, end: LocalDateTime, location: LocationData): List<LunarEvent> {
+        val startInstant = start.toInstant(TimeZone.currentSystemDefault())
+        val endInstant = end.toInstant(TimeZone.currentSystemDefault())
+        return getLunarEventsInRangeInternal(startInstant, endInstant, location)
+    }
+
+    @OptIn(kotlin.time.ExperimentalTime::class)
+    private fun getLunarEventsInRangeInternal(startInstant: kotlinx.datetime.Instant, endInstant: kotlinx.datetime.Instant, location: LocationData): List<LunarEvent> {
+        val events = mutableListOf<LunarEvent>()
+        
+        var currentMs = startInstant.toEpochMilliseconds()
+        val endMs = endInstant.toEpochMilliseconds()
+        val stepMs = 6 * 60 * 60 * 1000L 
+        
+        var prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
+        
+        while (currentMs < endMs) {
+            val nextMs = currentMs + stepMs
+            val nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(nextMs).toKastro().calculateLunarIllumination().phase
+            
+            val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
+            if (crossedEvent != null && crossedEvent.dateTime.toInstant(TimeZone.currentSystemDefault()) < endInstant) {
+                val moonData = getMoonData(crossedEvent.dateTime, location)
+                events.add(crossedEvent.copy(moonData = moonData))
+            }
+            
+            currentMs = nextMs
+            prevPhase = nextPhase
+        }
+
+        return events.sortedBy { it.dateTime }
+    }
+
+    override fun findNextEvent(type: EventType, from: LocalDateTime, location: LocationData): LunarEvent? {
+        val startInstant = from.toInstant(TimeZone.currentSystemDefault())
+        var currentMs = startInstant.toEpochMilliseconds()
+        val stepMs = 6 * 60 * 60 * 1000L 
+        val maxSteps = (45 * 24) / 6 
+        
+        var prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
+        
+        for (i in 0 until maxSteps) {
+            val nextMs = currentMs + stepMs
+            val nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(nextMs).toKastro().calculateLunarIllumination().phase
+            val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
+            
+            if (crossedEvent != null && crossedEvent.type == type) {
+                return crossedEvent.copy(moonData = getMoonData(crossedEvent.dateTime, location))
+            }
+            currentMs = nextMs
+            prevPhase = nextPhase
+        }
+        return null
+    }
+
+    override fun findPreviousEvent(type: EventType, from: LocalDateTime, location: LocationData): LunarEvent? {
+        val startInstant = from.toInstant(TimeZone.currentSystemDefault())
+        var currentMs = startInstant.toEpochMilliseconds()
+        val stepMs = 6 * 60 * 60 * 1000L 
+        val maxSteps = (45 * 24) / 6 
+        
+        var nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
+        
+        for (i in 0 until maxSteps) {
+            val prevMs = currentMs - stepMs
+            val prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(prevMs).toKastro().calculateLunarIllumination().phase
+            val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, prevMs, currentMs)
+            
+            if (crossedEvent != null && crossedEvent.type == type) {
+                return crossedEvent.copy(moonData = getMoonData(crossedEvent.dateTime, location))
+            }
+            currentMs = prevMs
+            nextPhase = prevPhase
+        }
+        return null
+    }
+
+    @OptIn(kotlin.time.ExperimentalTime::class)
     private fun findHorizonEvents(date: LocalDateTime, location: LocationData): Pair<LocalDateTime?, LocalDateTime?> {
         val startInstant = date.toInstant(TimeZone.currentSystemDefault())
         var currentMs = startInstant.toEpochMilliseconds()
@@ -148,40 +238,6 @@ class AstronomyRepositoryImpl : AstronomyRepository {
         }
         
         return null
-    }
-
-    @OptIn(kotlin.time.ExperimentalTime::class)
-    override fun getLunarEvents(year: Int, month: Int, location: LocationData): List<LunarEvent> {
-        val startInstant = LocalDateTime(year, month, 1, 0, 0).toInstant(TimeZone.currentSystemDefault())
-        val endInstant = if (month == 12) {
-            LocalDateTime(year + 1, 1, 1, 0, 0)
-        } else {
-            LocalDateTime(year, month + 1, 1, 0, 0)
-        }.toInstant(TimeZone.currentSystemDefault())
-
-        val events = mutableListOf<LunarEvent>()
-        
-        var currentMs = startInstant.toEpochMilliseconds()
-        val endMs = endInstant.toEpochMilliseconds()
-        val stepMs = 6 * 60 * 60 * 1000L 
-        
-        var prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
-        
-        while (currentMs < endMs) {
-            val nextMs = currentMs + stepMs
-            val nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(nextMs).toKastro().calculateLunarIllumination().phase
-            
-            val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
-            if (crossedEvent != null && crossedEvent.dateTime.toInstant(TimeZone.currentSystemDefault()) < endInstant) {
-                val moonData = getMoonData(crossedEvent.dateTime, location)
-                events.add(crossedEvent.copy(moonData = moonData))
-            }
-            
-            currentMs = nextMs
-            prevPhase = nextPhase
-        }
-
-        return events.sortedBy { it.dateTime }
     }
 
     @OptIn(kotlin.time.ExperimentalTime::class)

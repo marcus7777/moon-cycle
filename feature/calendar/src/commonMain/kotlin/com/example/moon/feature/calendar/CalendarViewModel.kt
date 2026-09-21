@@ -3,6 +3,7 @@ package com.example.moon.feature.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.moon.core.data.repository.AstronomyRepositoryImpl
+import com.example.moon.core.domain.model.EventType
 import com.example.moon.core.domain.model.LocationData
 import com.example.moon.core.domain.model.LunarEvent
 import com.example.moon.core.domain.model.MoonData
@@ -40,26 +41,38 @@ class CalendarViewModel(
         }
     }
 
-    fun loadEvents(year: Int, month: Int, location: LocationData) {
+    fun loadEvents(referenceDate: LocalDate, location: LocationData) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, selectedYear = year, selectedMonth = month)
-            val events = astronomyRepository.getLunarEvents(year, month, location)
+            _uiState.value = _uiState.value.copy(isLoading = true)
             
-            val dailyMoonData = mutableMapOf<LocalDate, MoonData>()
-            val firstOfMonth = LocalDate(year, month, 1)
-            val daysInMonth = if (month == 12) {
-                LocalDate(year + 1, 1, 1).toEpochDays() - firstOfMonth.toEpochDays()
-            } else {
-                LocalDate(year, month + 1, 1).toEpochDays() - firstOfMonth.toEpochDays()
+            val refDateTime = LocalDateTime(referenceDate.year, referenceDate.monthNumber, referenceDate.dayOfMonth, 12, 0)
+            
+            // 1. Find boundaries of the lunar month (New Moon to New Moon)
+            val prevNewMoon = astronomyRepository.findPreviousEvent(EventType.NEW_MOON, refDateTime, location)
+            val nextNewMoon = astronomyRepository.findNextEvent(EventType.NEW_MOON, refDateTime, location)
+            
+            if (prevNewMoon == null || nextNewMoon == null) {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                return@launch
             }
+
+            // 2. Load all events in this lunar cycle
+            val events = astronomyRepository.getLunarEventsInRange(prevNewMoon.dateTime, nextNewMoon.dateTime, location)
             
-            for (day in 1..daysInMonth) {
-                val date = LocalDate(year, month, day.toInt())
-                dailyMoonData[date] = astronomyRepository.getBasicMoonData(date, location)
+            // 3. Load daily data for each day in the cycle
+            val dailyMoonData = mutableMapOf<LocalDate, MoonData>()
+            var current = prevNewMoon.dateTime.date
+            val end = nextNewMoon.dateTime.date
+            
+            while (current <= end) {
+                dailyMoonData[current] = astronomyRepository.getBasicMoonData(current, location)
+                current = current.plus(1, DateTimeUnit.DAY)
             }
 
             _uiState.value = _uiState.value.copy(
-                isLoading = false, 
+                isLoading = false,
+                cycleStart = prevNewMoon,
+                cycleEnd = nextNewMoon,
                 events = events,
                 dailyMoonData = dailyMoonData
             )
@@ -67,15 +80,15 @@ class CalendarViewModel(
     }
     
     fun nextMonth(location: LocationData) {
-        val nextMonth = if (_uiState.value.selectedMonth == 12) 1 else _uiState.value.selectedMonth + 1
-        val nextYear = if (_uiState.value.selectedMonth == 12) _uiState.value.selectedYear + 1 else _uiState.value.selectedYear
-        loadEvents(nextYear, nextMonth, location)
+        val currentEnd = _uiState.value.cycleEnd?.dateTime ?: return
+        // Jump to 2 days after the next New Moon to find the FOLLOWING cycle
+        loadEvents(currentEnd.date.plus(2, DateTimeUnit.DAY), location)
     }
 
     fun previousMonth(location: LocationData) {
-        val prevMonth = if (_uiState.value.selectedMonth == 1) 12 else _uiState.value.selectedMonth - 1
-        val prevYear = if (_uiState.value.selectedMonth == 1) _uiState.value.selectedYear - 1 else _uiState.value.selectedYear
-        loadEvents(prevYear, prevMonth, location)
+        val currentStart = _uiState.value.cycleStart?.dateTime ?: return
+        // Jump to 2 days before the current cycle start to find the PREVIOUS cycle
+        loadEvents(currentStart.date.minus(2, DateTimeUnit.DAY), location)
     }
 
     fun getIcsExportContent(location: LocationData): String {
@@ -88,8 +101,8 @@ class CalendarViewModel(
 }
 
 data class CalendarUiState(
-    val selectedYear: Int = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year,
-    val selectedMonth: Int = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).monthNumber,
+    val cycleStart: LunarEvent? = null,
+    val cycleEnd: LunarEvent? = null,
     val events: List<LunarEvent> = emptyList(),
     val dailyMoonData: Map<LocalDate, MoonData> = emptyMap(),
     val notes: Map<LocalDate, String> = emptyMap(),

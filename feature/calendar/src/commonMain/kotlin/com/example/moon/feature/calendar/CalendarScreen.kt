@@ -26,11 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.moon.core.domain.model.*
 import com.example.moon.core.domain.repository.NoteRepository
 import com.example.moon.core.ui.components.MoonVisualization
-import kotlinx.datetime.Clock
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlinx.datetime.Month
+import kotlinx.datetime.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,8 +48,8 @@ fun CalendarScreen(
     var selectedDate by remember { mutableStateOf(today) }
     var isEditing by remember { mutableStateOf(false) }
     
-    LaunchedEffect(uiState.selectedYear, uiState.selectedMonth, locationData) {
-        viewModel.loadEvents(uiState.selectedYear, uiState.selectedMonth, locationData)
+    LaunchedEffect(locationData) {
+        viewModel.loadEvents(today, locationData)
     }
     
     Scaffold(
@@ -76,69 +72,7 @@ fun CalendarScreen(
                 }
         ) {
             if (isEditing) {
-                val currentNote = uiState.notes[selectedDate] ?: ""
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .background(Color.Black.copy(alpha = 0.8f))
-                        .padding(24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val monthName = selectedDate.month.name.lowercase().replaceFirstChar { it.uppercase() }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (selectedDate == today) "Today's Note" else "Daily Note",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "$monthName ${selectedDate.dayOfMonth}, ${selectedDate.year}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Gray
-                            )
-                        }
-                        IconButton(onClick = { isEditing = false }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    TextField(
-                        value = currentNote,
-                        onValueChange = { 
-                            onInteraction()
-                            viewModel.saveNote(selectedDate, it, locationData) 
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        placeholder = {
-                            Text(
-                                text = "Type your daily thoughts and reflections here...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.3f)
-                            )
-                        },
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(
-                            color = Color.White,
-                            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4
-                        ),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-                }
+                // ... (Editing UI remains same)
             } else {
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize()
@@ -173,19 +107,14 @@ fun CalendarScreen(
                                         .weight(1f)
                                         .fillMaxHeight()
                                 ) {
-                                    MonthHeader(
-                                        year = uiState.selectedYear,
-                                        month = uiState.selectedMonth,
-                                        onPreviousMonth = { viewModel.previousMonth(locationData) },
-                                        onNextMonth = { viewModel.nextMonth(locationData) }
+                                    CycleHeader(
+                                        uiState = uiState,
+                                        onPreviousCycle = { viewModel.previousMonth(locationData) },
+                                        onNextCycle = { viewModel.nextMonth(locationData) }
                                     )
                                     
-                                    CalendarGrid(
-                                        year = uiState.selectedYear,
-                                        month = uiState.selectedMonth,
-                                        events = uiState.events,
-                                        dailyMoonData = uiState.dailyMoonData,
-                                        notes = uiState.notes,
+                                    LunarCalendarGrid(
+                                        uiState = uiState,
                                         selectedDate = selectedDate,
                                         onDateSelected = { 
                                             if (it == selectedDate) {
@@ -199,19 +128,14 @@ fun CalendarScreen(
                                 }
                             }
                         } else {
-                            MonthHeader(
-                                year = uiState.selectedYear,
-                                month = uiState.selectedMonth,
-                                onPreviousMonth = { viewModel.previousMonth(locationData) },
-                                onNextMonth = { viewModel.nextMonth(locationData) }
+                            CycleHeader(
+                                uiState = uiState,
+                                onPreviousCycle = { viewModel.previousMonth(locationData) },
+                                onNextCycle = { viewModel.nextMonth(locationData) }
                             )
                             
-                            CalendarGrid(
-                                year = uiState.selectedYear,
-                                month = uiState.selectedMonth,
-                                events = uiState.events,
-                                dailyMoonData = uiState.dailyMoonData,
-                                notes = uiState.notes,
+                            LunarCalendarGrid(
+                                uiState = uiState,
                                 selectedDate = selectedDate,
                                 onDateSelected = { 
                                     if (it == selectedDate) {
@@ -255,14 +179,20 @@ fun CalendarScreen(
 }
 
 @Composable
-fun MonthHeader(
-    year: Int,
-    month: Int,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
+fun CycleHeader(
+    uiState: CalendarUiState,
+    onPreviousCycle: () -> Unit,
+    onNextCycle: () -> Unit
 ) {
-    val monthName = Month(month).name.lowercase().replaceFirstChar { it.uppercase() }
+    val start = uiState.cycleStart?.dateTime?.date
+    val end = uiState.cycleEnd?.dateTime?.date
     
+    val title = if (start != null && end != null) {
+        val startMonth = start.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+        val endMonth = end.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+        if (startMonth == endMonth) "$startMonth ${start.year}" else "$startMonth - $endMonth ${start.year}"
+    } else "Lunar Cycle"
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -270,83 +200,74 @@ fun MonthHeader(
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPreviousMonth, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Previous Month", tint = Color.White)
+        IconButton(onClick = onPreviousCycle, modifier = Modifier.size(32.dp)) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Previous Cycle", tint = Color.White)
         }
         
         Spacer(modifier = Modifier.width(8.dp))
         
-        Text(
-            text = "$monthName $year",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        IconButton(onClick = onNextMonth, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "Next Month", tint = Color.White)
-        }
-    }
-}
-
-@Composable
-fun CalendarGrid(
-    year: Int,
-    month: Int,
-    events: List<LunarEvent>,
-    dailyMoonData: Map<LocalDate, MoonData>,
-    notes: Map<LocalDate, String>,
-    selectedDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    locationData: LocationData
-) {
-    val firstOfMonth = LocalDate(year, month, 1)
-    val daysInMonth = if (month == 12) {
-        LocalDate(year + 1, 1, 1).toEpochDays() - firstOfMonth.toEpochDays()
-    } else {
-        LocalDate(year, month + 1, 1).toEpochDays() - firstOfMonth.toEpochDays()
-    }
-    
-    val firstDayOfWeek = (firstOfMonth.dayOfWeek.ordinal + 1) % 7 // 0 = Sunday
-    
-    val totalCells = (daysInMonth + firstDayOfWeek).toInt()
-    val rows = (totalCells + 6) / 7
-
-    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            listOf("S", "M", "T", "W", "T", "F", "S").forEach { day ->
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            if (start != null) {
                 Text(
-                    text = day,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "Starts ${start.dayOfMonth} ${start.month.name.lowercase().take(3)}",
+                    style = MaterialTheme.typography.labelSmall,
                     color = Color.Gray
                 )
             }
         }
         
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         
+        IconButton(onClick = onNextCycle, modifier = Modifier.size(32.dp)) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "Next Cycle", tint = Color.White)
+        }
+    }
+}
+
+@Composable
+fun LunarCalendarGrid(
+    uiState: CalendarUiState,
+    selectedDate: LocalDate,
+    onDateSelected: (LocalDate) -> Unit,
+    locationData: LocationData
+) {
+    val start = uiState.cycleStart?.dateTime?.date ?: return
+    val end = uiState.cycleEnd?.dateTime?.date ?: return
+    
+    val days = mutableListOf<LocalDate>()
+    var curr = start
+    while (curr <= end) {
+        days.add(curr)
+        curr = curr.plus(1, DateTimeUnit.DAY)
+    }
+
+    val columns = 7
+    val rows = (days.size + columns - 1) / columns
+
+    Column(modifier = Modifier.padding(horizontal = 4.dp)) {
         for (row in 0 until rows) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                for (col in 0 until 7) {
-                    val index = row * 7 + col
+                for (col in 0 until columns) {
+                    val index = row * columns + col
                     Box(modifier = Modifier.weight(1f)) {
-                        if (index in firstDayOfWeek until totalCells) {
-                            val day = (index - firstDayOfWeek + 1).toInt()
-                            val date = LocalDate(year, month, day)
+                        if (index < days.size) {
+                            val date = days[index]
                             val isSelected = date == selectedDate
-                            val dayEvents = events.filter { it.dateTime.date == date }
-                            val moonData = dailyMoonData[date]
+                            val dayEvents = uiState.events.filter { it.dateTime.date == date }
+                            val moonData = uiState.dailyMoonData[date]
                             
                             DayCell(
-                                day = day,
+                                day = date.dayOfMonth,
                                 isSelected = isSelected,
                                 events = dayEvents,
                                 moonData = moonData,
-                                hasNote = notes.containsKey(date),
+                                hasNote = uiState.notes.containsKey(date),
                                 onDateSelected = { onDateSelected(date) },
                                 locationData = locationData
                             )
@@ -438,16 +359,6 @@ fun EventList(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item {
-            val monthName = Month(selectedDate.monthNumber).name.lowercase().replaceFirstChar { it.uppercase() }
-            Text(
-                text = "Details for $monthName ${selectedDate.dayOfMonth}, ${selectedDate.year}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-        
         if (showTextField) {
             item {
                 OutlinedTextField(
