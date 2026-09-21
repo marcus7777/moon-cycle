@@ -62,6 +62,12 @@ fun CalendarScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.4f))
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) {
+                    onBack()
+                }
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {

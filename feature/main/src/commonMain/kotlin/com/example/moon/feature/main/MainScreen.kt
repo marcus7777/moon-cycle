@@ -92,7 +92,17 @@ fun MainScreen(
                 exit = fadeOut(),
                 modifier = Modifier.fillMaxSize()
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onInteraction()
+                            onShowCalendar()
+                        }
+                ) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)

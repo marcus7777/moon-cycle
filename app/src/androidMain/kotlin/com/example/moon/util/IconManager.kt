@@ -13,7 +13,7 @@ object IconManager {
         MoonPhase.WAXING_CRESCENT to "com.example.moon.MainActivityWaxingCrescent",
         MoonPhase.FIRST_QUARTER to "com.example.moon.MainActivityFirstQuarter",
         MoonPhase.WAXING_GIBBOUS to "com.example.moon.MainActivityWaxingGibbous",
-        MoonPhase.FULL to "com.example.moon.MainActivityFullMoon",
+        MoonPhase.FULL to "com.example.moon.MainActivity",
         MoonPhase.WANING_GIBBOUS to "com.example.moon.MainActivityWaningGibbous",
         MoonPhase.LAST_QUARTER to "com.example.moon.MainActivityLastQuarter",
         MoonPhase.WANING_CRESCENT to "com.example.moon.MainActivityWaningCrescent"
