@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="A real-time 3D moon phase tracker, lunar calendar, and astronomical position calculator.">
+  <meta name="description" content="A real-time 3D moon phase tracker, synodic lunar calendar, and daily reflection journal.">
 
   <title>Moon Cycle</title>
   <link rel="manifest" href="manifest.json">
@@ -16,16 +16,19 @@
   <div id="app">
 
     <!-- ==========================================
-         MAIN SCREEN VIEW
+         MAIN SCREEN VIEW (Zen Mode Gateway)
          ========================================== -->
     <section id="screen-main" class="screen active">
-      <!-- Centered 3D Moon Canvas -->
-      <div class="moon-canvas-container">
+      <!-- Centered 3D Moon Canvas (Tap-First -> Calendar) -->
+      <div class="moon-canvas-container" id="main-moon-container" title="Tap to open Lunar Calendar">
         <canvas id="main-moon-canvas"></canvas>
       </div>
 
       <!-- Ambient UI Overlay (Auto-fades on idle) -->
-      <div class="ui-overlay">
+      <div class="ui-overlay" id="main-ui-overlay">
+        <!-- Invisible / discrete touch target top-left (64px) for toggling UI -->
+        <div id="touch-target-topleft" class="corner-touch-target" title="Toggle UI"></div>
+
         <!-- Top Action Bar -->
         <header class="top-bar">
           <button id="btn-toggle-text" class="icon-btn" aria-label="Toggle UI Visibility" title="Hide/Show UI">
@@ -36,28 +39,19 @@
 
           <button id="btn-open-calendar" class="icon-btn" aria-label="Open Lunar Calendar" title="Calendar">
             <svg viewBox="0 0 24 24">
-              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 4h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 4h-2v-2h2v2zm4 4h-2v-2h2v2z"/>
             </svg>
           </button>
         </header>
 
-        <!-- Top Header Info -->
-        <div class="main-header">
-          <button id="location-badge" class="location-badge" title="Change Location">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-            <span id="location-name">London</span>
-          </button>
-          <h1 id="phase-title" class="phase-title">Waxing Gibbous</h1>
+        <!-- Top Header Info (Tap -> Details) -->
+        <div class="main-header clickable-header" id="main-phase-container" title="Tap to view Moon Details">
+          <h1 id="phase-title" class="phase-title">New Moon</h1>
         </div>
 
-        <!-- Bottom Actions & Event Countdown -->
-        <footer class="main-footer">
+        <!-- Bottom Event Countdown (Tap -> Details) -->
+        <footer class="main-footer clickable-footer" id="main-footer-container" title="Tap to view Moon Details">
           <p id="event-countdown" class="event-countdown"></p>
-          <button id="btn-details" class="primary-btn">
-            View Details
-          </button>
         </footer>
       </div>
     </section>
@@ -81,12 +75,25 @@
         <div class="detail-hero">
           <canvas id="detail-moon-canvas" class="detail-moon-canvas"></canvas>
           <div class="detail-hero-text">
-            <h3 id="detail-phase-name">Waxing Gibbous</h3>
-            <p id="detail-illumination-hero">Illumination: 75%</p>
+            <h3 id="detail-phase-name">New Moon</h3>
+            <p id="detail-illumination-hero">Illumination: 0%</p>
           </div>
         </div>
 
-        <!-- Metrics Grid -->
+        <!-- Viewing From Location Setting -->
+        <div class="detail-location-card" id="btn-open-location-picker" title="Change Location">
+          <div class="detail-location-info">
+            <span class="detail-label">Viewing From</span>
+            <div class="detail-location-name-row">
+              <span id="detail-location-name" class="detail-location-name">London</span>
+              <svg class="edit-icon" viewBox="0 0 24 24">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Astronomical Metrics -->
         <div class="detail-grid">
           <div class="detail-item">
             <span class="detail-label">Phase</span>
@@ -117,11 +124,64 @@
             <span id="detail-azimuth-val" class="detail-value">--°</span>
           </div>
         </div>
+
+        <!-- Data Backup & Recovery (JSONL) Section -->
+        <div class="section-card">
+          <h4 class="section-card-title">Data Backup & Recovery (JSONL)</h4>
+          <div class="section-card-actions">
+            <button id="btn-download-jsonl" class="action-btn">
+              <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              <span>Download Data</span>
+            </button>
+            <button id="btn-upload-jsonl" class="action-btn">
+              <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+              <span>Upload Data</span>
+            </button>
+            <input type="file" id="input-upload-jsonl" accept=".jsonl,.txt" style="display: none;">
+          </div>
+        </div>
+
+        <!-- Calendar Sync (iCal / .ics) Section -->
+        <div class="section-card">
+          <h4 class="section-card-title">Calendar Sync (iCal / .ics)</h4>
+          <div class="section-card-actions">
+            <button id="btn-export-ical" class="action-btn">
+              <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              <span>Export iCal</span>
+            </button>
+            <button id="btn-import-ical" class="action-btn">
+              <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+              <span>Import iCal</span>
+            </button>
+            <input type="file" id="input-upload-ical" accept=".ics" style="display: none;">
+          </div>
+        </div>
+
+        <!-- Wallpaper Settings -->
+        <div class="section-card">
+          <h4 class="section-card-title">Wallpaper Settings</h4>
+          <div class="wallpaper-row">
+            <div>
+              <p class="wallpaper-title">Dynamic Wallpaper</p>
+              <p class="wallpaper-desc">Automatically update your background to match the moon phase.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-wallpaper">
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <button id="btn-download-wallpaper" class="action-btn full-width" style="margin-top: 12px;">
+            <svg viewBox="0 0 24 24"><path d="M4 4h7V2H4c-1.1 0-2 .9-2 2v7h2V4zm6 9l-4 5h12l-3-4-2.03 2.71L10 13zm7-9h-7V2h7c1.1 0 2 .9 2 2v7h-2V4zm0 16h-7v2h7c1.1 0 2-.9 2-2v-7h-2v7zM4 13H2v7c0 1.1.9 2 2 2h7v-2H4v-7z"/></svg>
+            <span>Update / Download Wallpaper</span>
+          </button>
+        </div>
+
+        <div style="height: 32px;"></div>
       </div>
     </section>
 
     <!-- ==========================================
-         LUNAR CALENDAR SCREEN VIEW
+         LUNAR CALENDAR SCREEN VIEW (Synodic Cycle)
          ========================================== -->
     <section id="screen-calendar" class="screen">
       <header class="screen-header">
@@ -135,38 +195,69 @@
       </header>
 
       <div class="calendar-container">
-        <!-- Month Navigation -->
-        <div class="month-nav">
-          <button id="btn-prev-month" class="icon-btn" aria-label="Previous Month">
+        <!-- Synodic Cycle Navigation -->
+        <div class="cycle-nav">
+          <button id="btn-prev-cycle" class="icon-btn" aria-label="Previous Cycle">
             <svg viewBox="0 0 24 24">
               <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
             </svg>
           </button>
-          <span id="month-label" class="month-label">September 2026</span>
-          <button id="btn-next-month" class="icon-btn" aria-label="Next Month">
+          <span id="cycle-label" class="cycle-label">Lunar Cycle</span>
+          <button id="btn-next-cycle" class="icon-btn" aria-label="Next Cycle">
             <svg viewBox="0 0 24 24">
               <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
             </svg>
           </button>
         </div>
 
-        <!-- Weekdays Header -->
-        <div class="calendar-weekdays">
-          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-        </div>
-
-        <!-- Dynamic Days Grid -->
+        <!-- Dynamic Synodic Cycle Days Grid -->
         <div id="calendar-days-grid" class="calendar-days"></div>
 
         <div class="events-divider"></div>
 
-        <!-- Selected Date Events Section -->
+        <!-- Selected Date Events & Daily Note Preview -->
         <div class="events-section">
+          <!-- Daily Note Snippet / Details Link -->
+          <div id="calendar-note-preview" class="note-preview-card" style="display: none;">
+            <div class="note-preview-header">
+              <span class="note-preview-tag">Daily Note</span>
+              <button id="btn-edit-note-direct" class="note-edit-link">Edit Note</button>
+            </div>
+            <p id="note-preview-text" class="note-preview-body"></p>
+          </div>
+
+          <div class="calendar-details-shortcut">
+            <button id="btn-calendar-show-details" class="text-link-btn">
+              <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+              <span>Details</span>
+            </button>
+          </div>
+
           <h3 id="events-date-title" class="events-title">Events</h3>
           <div id="events-list-container"></div>
         </div>
       </div>
     </section>
+
+    <!-- ==========================================
+         FULL-SCREEN DAILY NOTE EDITOR OVERLAY
+         ========================================== -->
+    <div id="note-editor-overlay" class="note-editor-overlay">
+      <div class="note-editor-container">
+        <header class="note-editor-header">
+          <div class="note-editor-titles">
+            <h2 id="note-editor-headline" class="note-editor-headline">Today's Note</h2>
+            <p id="note-editor-subtitle" class="note-editor-subtitle">September 22, 2026</p>
+          </div>
+          <button id="btn-close-note" class="icon-btn" aria-label="Close Note Editor" title="Close">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
+        </header>
+        <textarea id="note-textarea" class="note-textarea" placeholder="Type your daily thoughts and reflections here..." spellcheck="true"></textarea>
+      </div>
+    </div>
 
     <!-- ==========================================
          LOCATION PICKER MODAL DIALOG
@@ -186,8 +277,21 @@
             <svg viewBox="0 0 24 24">
               <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
             </svg>
-            Use My Location
+            <span>Use My Location</span>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         STATUS ALERT MODAL (Import / Export)
+         ========================================== -->
+    <div id="status-modal" class="modal-overlay">
+      <div class="modal-card">
+        <h3 id="status-modal-title" class="modal-title">Import Status</h3>
+        <p id="status-modal-message" class="modal-desc">Data imported successfully.</p>
+        <div class="modal-actions" style="justify-content: flex-end;">
+          <button id="btn-status-modal-ok" class="gps-btn" style="min-width: 80px; justify-content: center;">OK</button>
         </div>
       </div>
     </div>

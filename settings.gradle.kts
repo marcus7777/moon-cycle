@@ -31,4 +31,5 @@ include(":feature:main")
 include(":feature:calendar")
 include(":feature:details")
 include(":feature:navigation")
+include(":wear")
  

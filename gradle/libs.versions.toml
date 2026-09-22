@@ -51,6 +51,7 @@ commonsSuncalc = "3.11"
 kastro = "0.6.0"
 kotlinxDatetime = "0.6.1"
 glance = "1.1.1"
+wearCompose = "1.6.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -111,6 +112,9 @@ desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", ver
 commons-suncalc = { group = "org.shredzone.commons", name = "commons-suncalc", version.ref = "commonsSuncalc" }
 kastro = { group = "dev.jamesyox", name = "kastro", version.ref = "kastro" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+androidx-wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "wearCompose" }
+androidx-wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation", version.ref = "wearCompose" }
+androidx-wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-navigation", version.ref = "wearCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

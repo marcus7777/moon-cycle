@@ -260,6 +260,39 @@ const Astronomy = (() => {
     return new Date((low + high) / 2);
   }
 
+  function checkCrossingAndRefine(p1, p2, t1, t2) {
+    let target = null;
+    let type = null;
+
+    if (p1 < 90.0 && p2 >= 90.0) { target = 90.0; type = 'FIRST_QUARTER'; }
+    else if (p1 < 180.0 && p2 >= 180.0) { target = 180.0; type = 'FULL_MOON'; }
+    else if (p1 < 270.0 && p2 >= 270.0) { target = 270.0; type = 'LAST_QUARTER'; }
+    else if ((p2 < p1 && p1 > 270.0 && p2 < 90.0) || (p1 > 355.0 && p2 < 5.0)) {
+      target = 360.0; type = 'NEW_MOON';
+    }
+
+    if (target === null) return null;
+
+    let low = t1;
+    let high = t2;
+    for (let step = 0; step < 8; step++) {
+      const mid = (low + high) / 2;
+      let pMid = getCelestialData(toJulianDate(new Date(mid))).diffLong;
+      if (target === 360.0 && pMid < 180.0) pMid += 360.0;
+      if (pMid < target) low = mid; else high = mid;
+    }
+    const eventDate = new Date((low + high) / 2);
+    const distCel = getCelestialData(toJulianDate(eventDate));
+    const isSuper = type === 'FULL_MOON' && distCel.moonDistanceKm < 360000;
+    const isMicro = type === 'FULL_MOON' && distCel.moonDistanceKm > 405000;
+    return {
+      type,
+      dateTime: eventDate,
+      isSuperMoon: isSuper,
+      isMicroMoon: isMicro
+    };
+  }
+
   // Find next major lunar phase event from given date
   function findNextMajorEvent(date) {
     let currentMs = date.getTime();
@@ -272,35 +305,9 @@ const Astronomy = (() => {
       const nextMs = currentMs + stepMs;
       const nextCel = getCelestialData(toJulianDate(new Date(nextMs)));
 
-      const p1 = prevCel.diffLong;
-      const p2 = nextCel.diffLong;
-
-      let target = null;
-      let type = null;
-
-      if (p1 < 90.0 && p2 >= 90.0) { target = 90.0; type = 'FIRST_QUARTER'; }
-      else if (p1 < 180.0 && p2 >= 180.0) { target = 180.0; type = 'FULL_MOON'; }
-      else if (p1 < 270.0 && p2 >= 270.0) { target = 270.0; type = 'LAST_QUARTER'; }
-      else if ((p2 < p1 && p1 > 270.0 && p2 < 90.0) || (p1 > 355.0 && p2 < 5.0)) {
-        target = 360.0; type = 'NEW_MOON';
-      }
-
-      if (target !== null) {
-        let low = currentMs;
-        let high = nextMs;
-        for (let step = 0; step < 8; step++) {
-          const mid = (low + high) / 2;
-          let pMid = getCelestialData(toJulianDate(new Date(mid))).diffLong;
-          if (target === 360.0 && pMid < 180.0) pMid += 360.0;
-          if (pMid < target) low = mid; else high = mid;
-        }
-        const eventDate = new Date((low + high) / 2);
-        return {
-          type,
-          dateTime: eventDate,
-          isSuperMoon: false,
-          isMicroMoon: false
-        };
+      const crossedEvent = checkCrossingAndRefine(prevCel.diffLong, nextCel.diffLong, currentMs, nextMs);
+      if (crossedEvent) {
+        return crossedEvent;
       }
 
       currentMs = nextMs;
@@ -310,11 +317,54 @@ const Astronomy = (() => {
     return null;
   }
 
-  // Get all lunar events in a specific month
-  function getLunarEvents(year, month, lat, lng) {
-    const startDate = new Date(year, month - 1, 1, 0, 0, 0);
-    const endDate = month === 12 ? new Date(year + 1, 0, 1, 0, 0, 0) : new Date(year, month, 1, 0, 0, 0);
+  // Find next specific event type (e.g. 'NEW_MOON') from given date
+  function findNextEvent(type, fromDate) {
+    let currentMs = fromDate.getTime();
+    const stepMs = 6 * 60 * 60 * 1000;
+    const maxSteps = (45 * 24) / 6;
 
+    let prevCel = getCelestialData(toJulianDate(new Date(currentMs)));
+
+    for (let i = 0; i < maxSteps; i++) {
+      const nextMs = currentMs + stepMs;
+      const nextCel = getCelestialData(toJulianDate(new Date(nextMs)));
+
+      const crossedEvent = checkCrossingAndRefine(prevCel.diffLong, nextCel.diffLong, currentMs, nextMs);
+      if (crossedEvent && crossedEvent.type === type) {
+        return crossedEvent;
+      }
+
+      currentMs = nextMs;
+      prevCel = nextCel;
+    }
+    return null;
+  }
+
+  // Find previous specific event type (e.g. 'NEW_MOON') before given date
+  function findPreviousEvent(type, fromDate) {
+    let currentMs = fromDate.getTime();
+    const stepMs = 6 * 60 * 60 * 1000;
+    const maxSteps = (45 * 24) / 6;
+
+    let nextCel = getCelestialData(toJulianDate(new Date(currentMs)));
+
+    for (let i = 0; i < maxSteps; i++) {
+      const prevMs = currentMs - stepMs;
+      const prevCel = getCelestialData(toJulianDate(new Date(prevMs)));
+
+      const crossedEvent = checkCrossingAndRefine(prevCel.diffLong, nextCel.diffLong, prevMs, currentMs);
+      if (crossedEvent && crossedEvent.type === type) {
+        return crossedEvent;
+      }
+
+      currentMs = prevMs;
+      nextCel = prevCel;
+    }
+    return null;
+  }
+
+  // Get all lunar events in a specific time range [startDate, endDate]
+  function getLunarEventsInRange(startDate, endDate) {
     const events = [];
     let currentMs = startDate.getTime();
     const endMs = endDate.getTime();
@@ -326,38 +376,9 @@ const Astronomy = (() => {
       const nextMs = currentMs + stepMs;
       const nextCel = getCelestialData(toJulianDate(new Date(nextMs)));
 
-      const p1 = prevCel.diffLong;
-      const p2 = nextCel.diffLong;
-
-      let target = null;
-      let type = null;
-
-      if (p1 < 90.0 && p2 >= 90.0) { target = 90.0; type = 'FIRST_QUARTER'; }
-      else if (p1 < 180.0 && p2 >= 180.0) { target = 180.0; type = 'FULL_MOON'; }
-      else if (p1 < 270.0 && p2 >= 270.0) { target = 270.0; type = 'LAST_QUARTER'; }
-      else if (p2 < p1 && p1 > 270.0 && p2 < 90.0) { target = 360.0; type = 'NEW_MOON'; }
-
-      if (target !== null) {
-        let low = currentMs;
-        let high = nextMs;
-        for (let s = 0; s < 8; s++) {
-          const mid = (low + high) / 2;
-          let pMid = getCelestialData(toJulianDate(new Date(mid))).diffLong;
-          if (target === 360.0 && pMid < 180.0) pMid += 360.0;
-          if (pMid < target) low = mid; else high = mid;
-        }
-        const eventDate = new Date((low + high) / 2);
-        if (eventDate < endDate) {
-          const distCel = getCelestialData(toJulianDate(eventDate));
-          const isSuper = type === 'FULL_MOON' && distCel.moonDistanceKm < 360000;
-          const isMicro = type === 'FULL_MOON' && distCel.moonDistanceKm > 405000;
-          events.push({
-            type,
-            dateTime: eventDate,
-            isSuperMoon: isSuper,
-            isMicroMoon: isMicro
-          });
-        }
+      const crossed = checkCrossingAndRefine(prevCel.diffLong, nextCel.diffLong, currentMs, nextMs);
+      if (crossed && crossed.dateTime.getTime() <= endMs && crossed.dateTime.getTime() >= startDate.getTime()) {
+        events.push(crossed);
       }
 
       currentMs = nextMs;
@@ -365,9 +386,70 @@ const Astronomy = (() => {
     }
 
     scanPerigeeApogee(startDate, endDate, events);
-
     events.sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
     return events;
+  }
+
+  // Get all lunar events in a specific Gregorian month
+  function getLunarEvents(year, month, lat, lng) {
+    const startDate = new Date(year, month - 1, 1, 0, 0, 0);
+    const endDate = month === 12 ? new Date(year + 1, 0, 1, 0, 0, 0) : new Date(year, month, 1, 0, 0, 0);
+    return getLunarEventsInRange(startDate, endDate);
+  }
+
+  // Compute full synodic lunar cycle data (from previous New Moon to next New Moon)
+  function getLunarCycleData(referenceDate, location) {
+    const refDateTime = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth(),
+      referenceDate.getDate(),
+      12, 0, 0
+    );
+
+    const prevNewMoon = findPreviousEvent('NEW_MOON', refDateTime);
+    const nextNewMoon = findNextEvent('NEW_MOON', refDateTime);
+
+    if (!prevNewMoon || !nextNewMoon) return null;
+
+    const events = getLunarEventsInRange(prevNewMoon.dateTime, nextNewMoon.dateTime);
+
+    // Days in cycle: from 1 day before prevNewMoon date to nextNewMoon date
+    // Matches CalendarViewModel.kt:
+    // val currentA = prevNewMoon.dateTime.date
+    // var current = currentA.minus(1, DateTimeUnit.DAY)
+    // val end = nextNewMoon.dateTime.date
+    const days = [];
+    const dailyMoonData = {};
+
+    const startDay = new Date(
+      prevNewMoon.dateTime.getFullYear(),
+      prevNewMoon.dateTime.getMonth(),
+      prevNewMoon.dateTime.getDate() - 1,
+      12, 0, 0
+    );
+    const endDay = new Date(
+      nextNewMoon.dateTime.getFullYear(),
+      nextNewMoon.dateTime.getMonth(),
+      nextNewMoon.dateTime.getDate(),
+      12, 0, 0
+    );
+
+    let curr = new Date(startDay.getTime());
+    while (curr.getTime() <= endDay.getTime()) {
+      const dayCopy = new Date(curr.getTime());
+      const dateKey = `${dayCopy.getFullYear()}-${String(dayCopy.getMonth() + 1).padStart(2, '0')}-${String(dayCopy.getDate()).padStart(2, '0')}`;
+      days.push(dayCopy);
+      dailyMoonData[dateKey] = getMoonData(dayCopy, location, false);
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    return {
+      cycleStart: prevNewMoon,
+      cycleEnd: nextNewMoon,
+      events,
+      days,
+      dailyMoonData
+    };
   }
 
   function scanPerigeeApogee(startDate, endDate, events) {
@@ -476,6 +558,10 @@ const Astronomy = (() => {
   return {
     getMoonData,
     getLunarEvents,
+    getLunarEventsInRange,
+    getLunarCycleData,
+    findNextEvent,
+    findPreviousEvent,
     formatEventName,
     mapAngleToPhase
   };

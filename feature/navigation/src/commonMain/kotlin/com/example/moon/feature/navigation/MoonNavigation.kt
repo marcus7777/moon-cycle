@@ -51,7 +51,6 @@ fun MoonNavigation(
                 delay(delayPerStep)
             }
             currentOverlay = null
-            navigationAlpha = 1f
         }
     }
 
@@ -88,7 +87,7 @@ fun MoonNavigation(
         AnimatedVisibility(
             visible = currentOverlay is Overlay.Calendar,
             enter = slideInVertically { it },
-            exit = slideOutVertically { it }
+            exit = if (navigationAlpha == 0f) ExitTransition.None else slideOutVertically { it }
         ) {
             CalendarScreen(
                 modifier = Modifier.graphicsLayer { alpha = navigationAlpha },
@@ -106,7 +105,7 @@ fun MoonNavigation(
         AnimatedVisibility(
             visible = currentOverlay is Overlay.Details,
             enter = slideInVertically { it },
-            exit = slideOutVertically { it }
+            exit = if (navigationAlpha == 0f) ExitTransition.None else slideOutVertically { it }
         ) {
             MoonDetailScreen(
                 modifier = Modifier.graphicsLayer { alpha = navigationAlpha },

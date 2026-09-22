@@ -1,11 +1,12 @@
 /**
  * app.js - Main Application Controller
- * Handles state, view navigation, auto-fade idle timer, geolocation,
- * calendar rendering, and dynamic favicon updates.
+ * Handles tap-first intelligent navigation, synodic lunar cycle calendar,
+ * dual-tap reflection journaling, data backup/recovery (JSONL & iCal),
+ * 60-second Zen idle timeout, and dynamic favicon updates.
  */
 
 (() => {
-  // Preset Cities from Android App
+  // Preset Cities matching Android App
   const CITIES = [
     { name: "London", lat: 51.5074, lng: -0.1278 },
     { name: "New York", lat: 40.7128, lng: -74.0060 },
@@ -40,38 +41,44 @@
     currentMoonData: null,
     isTextVisible: true,
     activeScreen: 'main', // 'main', 'details', 'calendar'
-    calendarYear: new Date().getFullYear(),
-    calendarMonth: new Date().getMonth() + 1, // 1-12
+    isEditingNote: false,
+    currentReferenceDate: new Date(),
     selectedDate: new Date(),
-    calendarEvents: [],
-    idleTimer: null
+    currentCycleData: null,
+    notes: {}, // Key: YYYY-MM-DD -> { text, calendarDay, dateWritten, lastUpdated }
+    mainIdleTimer: null,
+    zenIdleTimer: null
   };
 
   // DOM Elements Cache
   const elements = {
+    // Screens & Overlays
     mainScreen: document.getElementById('screen-main'),
     detailsScreen: document.getElementById('screen-details'),
     calendarScreen: document.getElementById('screen-calendar'),
+    noteEditorOverlay: document.getElementById('note-editor-overlay'),
+    locationModal: document.getElementById('location-modal'),
+    statusModal: document.getElementById('status-modal'),
+
+    // Main Screen Elements
+    mainMoonContainer: document.getElementById('main-moon-container'),
     mainCanvas: document.getElementById('main-moon-canvas'),
-    uiOverlay: document.querySelector('.ui-overlay'),
-    locationBadgeText: document.getElementById('location-name'),
-    phaseTitle: document.getElementById('phase-title'),
-    eventCountdown: document.getElementById('event-countdown'),
-    detailsBtn: document.getElementById('btn-details'),
+    mainUiOverlay: document.getElementById('main-ui-overlay'),
+    touchTargetTopLeft: document.getElementById('touch-target-topleft'),
     btnToggleText: document.getElementById('btn-toggle-text'),
     btnOpenCalendar: document.getElementById('btn-open-calendar'),
-    btnDetailsBack: document.getElementById('btn-details-back'),
-    btnCalendarBack: document.getElementById('btn-calendar-back'),
-    locationModal: document.getElementById('location-modal'),
-    citySelect: document.getElementById('city-select'),
-    btnUseGps: document.getElementById('btn-use-gps'),
-    btnModalCancel: document.getElementById('btn-modal-cancel'),
-    locationBadge: document.getElementById('location-badge'),
-    
+    mainPhaseContainer: document.getElementById('main-phase-container'),
+    phaseTitle: document.getElementById('phase-title'),
+    mainFooterContainer: document.getElementById('main-footer-container'),
+    eventCountdown: document.getElementById('event-countdown'),
+
     // Details Screen Elements
+    btnDetailsBack: document.getElementById('btn-details-back'),
     detailCanvas: document.getElementById('detail-moon-canvas'),
     detailPhaseName: document.getElementById('detail-phase-name'),
     detailIlluminationHero: document.getElementById('detail-illumination-hero'),
+    btnOpenLocationPicker: document.getElementById('btn-open-location-picker'),
+    detailLocationName: document.getElementById('detail-location-name'),
     detailPhaseVal: document.getElementById('detail-phase-val'),
     detailIlluminationVal: document.getElementById('detail-illumination-val'),
     detailAgeVal: document.getElementById('detail-age-val'),
@@ -79,17 +86,105 @@
     detailSetVal: document.getElementById('detail-set-val'),
     detailAltitudeVal: document.getElementById('detail-altitude-val'),
     detailAzimuthVal: document.getElementById('detail-azimuth-val'),
-    
+    btnDownloadJsonl: document.getElementById('btn-download-jsonl'),
+    btnUploadJsonl: document.getElementById('btn-upload-jsonl'),
+    inputUploadJsonl: document.getElementById('input-upload-jsonl'),
+    btnExportIcal: document.getElementById('btn-export-ical'),
+    btnImportIcal: document.getElementById('btn-import-ical'),
+    inputUploadIcal: document.getElementById('input-upload-ical'),
+    toggleWallpaper: document.getElementById('toggle-wallpaper'),
+    btnDownloadWallpaper: document.getElementById('btn-download-wallpaper'),
+
     // Calendar Screen Elements
-    monthLabel: document.getElementById('month-label'),
-    btnPrevMonth: document.getElementById('btn-prev-month'),
-    btnNextMonth: document.getElementById('btn-next-month'),
+    btnCalendarBack: document.getElementById('btn-calendar-back'),
+    btnPrevCycle: document.getElementById('btn-prev-cycle'),
+    btnNextCycle: document.getElementById('btn-next-cycle'),
+    cycleLabel: document.getElementById('cycle-label'),
     calendarDaysGrid: document.getElementById('calendar-days-grid'),
+    calendarNotePreview: document.getElementById('calendar-note-preview'),
+    btnEditNoteDirect: document.getElementById('btn-edit-note-direct'),
+    notePreviewText: document.getElementById('note-preview-text'),
+    btnCalendarShowDetails: document.getElementById('btn-calendar-show-details'),
     eventsDateTitle: document.getElementById('events-date-title'),
-    eventsListContainer: document.getElementById('events-list-container')
+    eventsListContainer: document.getElementById('events-list-container'),
+
+    // Note Editor Elements
+    noteEditorHeadline: document.getElementById('note-editor-headline'),
+    noteEditorSubtitle: document.getElementById('note-editor-subtitle'),
+    btnCloseNote: document.getElementById('btn-close-note'),
+    noteTextarea: document.getElementById('note-textarea'),
+
+    // Location Modal Elements
+    citySelect: document.getElementById('city-select'),
+    btnUseGps: document.getElementById('btn-use-gps'),
+    btnModalCancel: document.getElementById('btn-modal-cancel'),
+
+    // Status Modal Elements
+    statusModalTitle: document.getElementById('status-modal-title'),
+    statusModalMessage: document.getElementById('status-modal-message'),
+    btnStatusModalOk: document.getElementById('btn-status-modal-ok')
   };
 
-  // High-DPI Canvas Scaling Helper
+  // Format Helper: ISO date key YYYY-MM-DD
+  function toDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function isSameDay(d1, d2) {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  }
+
+  // ==========================================
+  // NOTE REPOSITORY (localStorage)
+  // ==========================================
+  function loadNotesFromStorage() {
+    try {
+      const raw = localStorage.getItem('moon_notes');
+      if (raw) {
+        state.notes = JSON.parse(raw);
+      }
+    } catch (e) {
+      console.warn('Failed to load notes from localStorage', e);
+      state.notes = {};
+    }
+  }
+
+  function saveNotesToStorage() {
+    try {
+      localStorage.setItem('moon_notes', JSON.stringify(state.notes));
+    } catch (e) {
+      console.warn('Failed to save notes to localStorage', e);
+    }
+  }
+
+  function getNoteEntry(dateKey) {
+    return state.notes[dateKey] || null;
+  }
+
+  function saveNoteText(dateKey, text) {
+    if (!text || text.trim() === '') {
+      delete state.notes[dateKey];
+    } else {
+      const nowIso = new Date().toISOString();
+      const existing = state.notes[dateKey];
+      state.notes[dateKey] = {
+        text: text.trim(),
+        calendarDay: dateKey,
+        dateWritten: existing ? existing.dateWritten : nowIso,
+        lastUpdated: nowIso
+      };
+    }
+    saveNotesToStorage();
+  }
+
+  // ==========================================
+  // HIGH-DPI CANVAS SCALING
+  // ==========================================
   function setupCanvasDpi(canvas) {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -105,41 +200,37 @@
     return { ctx, width, height };
   }
 
-  // Update Moon Calculations & Render Main View
+  // ==========================================
+  // ASTRONOMY & MAIN MOON RENDERING
+  // ==========================================
   function updateMoon() {
     const now = new Date();
     state.currentMoonData = Astronomy.getMoonData(now, state.location, true);
 
-    // Update Text Elements
-    elements.locationBadgeText.textContent = state.location.name || (state.location.isDefault ? "London" : "Custom Location");
+    // Update Header Text
     elements.phaseTitle.textContent = state.currentMoonData.phaseDescription;
-    
-    if (elements.detailsBtn) {
-      elements.detailsBtn.textContent = state.location.name 
-        ? `Details from ${state.location.name}` 
-        : "View Details";
-    }
 
-    // Countdown Text
+    // Countdown Text (matches Android format)
     if (state.currentMoonData.nextEvent) {
       const event = state.currentMoonData.nextEvent;
       const diffMs = event.dateTime.getTime() - now.getTime();
-      const diffDays = Math.floor(diffMs / (86400000));
+      const diffDays = Math.floor(diffMs / 86400000);
       const diffHours = Math.floor((diffMs % 86400000) / 3600000);
 
       const eventName = Astronomy.formatEventName(event);
-      let countdown = `${eventName} soon`;
+      let countdown = '';
       if (diffDays > 0) {
-        countdown = `${eventName} in ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+        countdown = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} until ${eventName}`;
       } else if (diffHours > 0) {
-        countdown = `${eventName} in ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+        countdown = `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} until ${eventName}`;
+      } else {
+        countdown = `${eventName} is tonight`;
       }
       elements.eventCountdown.textContent = countdown;
     } else {
       elements.eventCountdown.textContent = '';
     }
 
-    // Render Canvas
     renderMainCanvas();
     updateFavicon();
   }
@@ -150,7 +241,6 @@
     MoonRenderer.render(ctx, width, height, state.currentMoonData, state.location);
   }
 
-  // Update Favicon dynamically with the current moon phase
   function updateFavicon() {
     if (!state.currentMoonData) return;
     try {
@@ -163,43 +253,54 @@
       }
       link.href = dataUrl;
     } catch (e) {
-      // Favicon fallback
+      // Ignore favicon render failure in non-browser environments
     }
   }
 
-  // Idle Timer for Ambient UI Auto-Fade
+  // ==========================================
+  // ZEN IDLE TIMEOUT & AMBIENT UI FADE
+  // ==========================================
   function showUiWithTimer() {
     state.isTextVisible = true;
-    elements.uiOverlay.classList.remove('hidden-ui');
-    resetIdleTimer();
-  }
-
-  function hideUi() {
-    clearTimeout(state.idleTimer);
-    state.isTextVisible = false;
-    elements.uiOverlay.classList.add('hidden-ui');
+    elements.mainUiOverlay.classList.remove('hidden-ui');
+    clearTimeout(state.mainIdleTimer);
+    state.mainIdleTimer = setTimeout(() => {
+      if (state.activeScreen === 'main') {
+        state.isTextVisible = false;
+        elements.mainUiOverlay.classList.add('hidden-ui');
+      }
+    }, 5000);
   }
 
   function toggleUi() {
     if (state.isTextVisible) {
-      hideUi();
+      clearTimeout(state.mainIdleTimer);
+      state.isTextVisible = false;
+      elements.mainUiOverlay.classList.add('hidden-ui');
     } else {
       showUiWithTimer();
     }
   }
 
-  function resetIdleTimer() {
-    clearTimeout(state.idleTimer);
-    state.idleTimer = setTimeout(() => {
-      if (state.activeScreen === 'main') {
-        hideUi();
+  // 60-Second Zen Idle Timer: returns from any screen overlay back to Zen Moon
+  function resetZenIdleTimer() {
+    clearTimeout(state.zenIdleTimer);
+    state.zenIdleTimer = setTimeout(() => {
+      if (state.activeScreen !== 'main' || state.isEditingNote) {
+        if (state.isEditingNote) {
+          closeNoteEditor();
+        }
+        navigateTo('main');
       }
-    }, 5000);
+    }, 60000); // 1 minute inactivity
   }
 
-  // Navigation Screen Management
+  // ==========================================
+  // NAVIGATION & VIEW SWITCHING
+  // ==========================================
   function navigateTo(screenName) {
     state.activeScreen = screenName;
+    resetZenIdleTimer();
 
     elements.mainScreen.classList.remove('active');
     elements.detailsScreen.classList.remove('active');
@@ -210,22 +311,22 @@
       renderMainCanvas();
       showUiWithTimer();
     } else if (screenName === 'details') {
-      clearTimeout(state.idleTimer);
       elements.detailsScreen.classList.add('active');
       renderDetailsScreen();
     } else if (screenName === 'calendar') {
-      clearTimeout(state.idleTimer);
       elements.calendarScreen.classList.add('active');
-      renderCalendarScreen();
+      loadAndRenderSynodicCalendar();
     }
   }
 
-  // Render Moon Detail Screen
+  // ==========================================
+  // MOON DETAILS SCREEN
+  // ==========================================
   function renderDetailsScreen() {
-    if (!state.currentMoonData) return;
+    if (!state.currentMoonData) updateMoon();
     const data = state.currentMoonData;
 
-    // Canvas Hero
+    // Render Canvas Hero
     const { ctx, width, height } = setupCanvasDpi(elements.detailCanvas);
     MoonRenderer.render(ctx, width, height, data, state.location);
 
@@ -233,6 +334,11 @@
     const illumPercent = Math.round(data.illumination * 100);
     elements.detailIlluminationHero.textContent = `Illumination: ${illumPercent}%`;
 
+    // Location name
+    const locText = state.location.name || (state.location.isDefault ? "London" : "Current Location");
+    elements.detailLocationName.textContent = locText;
+
+    // Detail Items
     elements.detailPhaseVal.textContent = data.phaseDescription;
     elements.detailIlluminationVal.textContent = `${illumPercent}%`;
     elements.detailAgeVal.textContent = `${data.age.toFixed(1)} days`;
@@ -247,93 +353,128 @@
     elements.detailRiseVal.textContent = formatTime(data.riseTime);
     elements.detailSetVal.textContent = formatTime(data.setTime);
 
-    elements.detailAltitudeVal.textContent = data.altitude !== undefined 
-      ? `${data.altitude.toFixed(1)}°` 
+    elements.detailAltitudeVal.textContent = data.altitude !== undefined
+      ? `${data.altitude.toFixed(1)}°`
       : '--';
-    elements.detailAzimuthVal.textContent = data.azimuth !== undefined 
-      ? `${data.azimuth.toFixed(1)}°` 
+    elements.detailAzimuthVal.textContent = data.azimuth !== undefined
+      ? `${data.azimuth.toFixed(1)}°`
       : '--';
   }
 
-  // Render Calendar Screen
-  function renderCalendarScreen() {
-    const year = state.calendarYear;
-    const month = state.calendarMonth; // 1-12
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    elements.monthLabel.textContent = `${monthNames[month - 1]} ${year}`;
+  // ==========================================
+  // TRUE SYNODIC LUNAR CALENDAR
+  // ==========================================
+  function loadAndRenderSynodicCalendar() {
+    state.currentCycleData = Astronomy.getLunarCycleData(state.currentReferenceDate, state.location);
+    if (!state.currentCycleData) return;
 
-    // Get lunar events for month
-    state.calendarEvents = Astronomy.getLunarEvents(year, month, state.location.latitude, state.location.longitude);
+    const { cycleStart, cycleEnd, days, events, dailyMoonData } = state.currentCycleData;
 
-    // Days Grid
+    // Format Cycle Title: e.g. "Sep 2026" or "Sep - Oct 2026"
+    const startMonth = cycleStart.dateTime.toLocaleString('en', { month: 'short' });
+    const endMonth = cycleEnd.dateTime.toLocaleString('en', { month: 'short' });
+    const year = cycleEnd.dateTime.getFullYear();
+    elements.cycleLabel.textContent = startMonth === endMonth
+      ? `${startMonth} ${year}`
+      : `${startMonth} - ${endMonth} ${year}`;
+
+    // Clear Days Grid
     elements.calendarDaysGrid.innerHTML = '';
 
-    const firstOfMonth = new Date(year, month - 1, 1);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const firstDayOfWeek = firstOfMonth.getDay(); // 0 = Sunday
-
-    // Pre-month empty padding cells
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      const emptyCell = document.createElement('div');
-      emptyCell.className = 'day-cell empty';
-      elements.calendarDaysGrid.appendChild(emptyCell);
-    }
-
-    // Days in current month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const cellDate = new Date(year, month - 1, day);
-      const isSelected = isSameDay(cellDate, state.selectedDate);
-
-      // Moon Data for this day at noon
-      const dayNoon = new Date(year, month - 1, day, 12, 0, 0);
-      const dayMoonData = Astronomy.getMoonData(dayNoon, state.location, false);
-
-      // Check if event on this day
-      const dayEvents = state.calendarEvents.filter(e => isSameDay(e.dateTime, cellDate));
+    days.forEach(date => {
+      const dateKey = toDateKey(date);
+      const isSelected = isSameDay(date, state.selectedDate);
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday
+      const isMonday = (dayOfWeek === 1);
+      const isSunday = (dayOfWeek === 0);
+      const hasNote = Boolean(state.notes[dateKey] && state.notes[dateKey].text);
 
       const cell = document.createElement('div');
-      cell.className = `day-cell ${isSelected ? 'selected' : ''}`;
+      let cellClasses = 'day-cell';
+      if (isSelected) cellClasses += ' selected';
+      else if (isMonday) cellClasses += ' monday';
+      else if (isSunday) cellClasses += ' sunday';
+
+      cell.className = cellClasses;
       cell.innerHTML = `
-        <span class="day-number">${day}</span>
+        <span class="day-number">${date.getDate()}</span>
         <canvas class="day-moon-canvas" width="20" height="20"></canvas>
-        ${dayEvents.length > 0 ? '<span class="day-event-dot"></span>' : ''}
+        ${hasNote ? '<span class="day-note-dot" title="Has Note"></span>' : ''}
       `;
 
-      // Render miniature moon on the cell's canvas
-      const dayCanvas = cell.querySelector('day-moon-canvas') || cell.querySelector('canvas');
-      if (dayCanvas) {
+      // Render miniature moon
+      const dayCanvas = cell.querySelector('canvas');
+      const dayData = dailyMoonData[dateKey];
+      if (dayCanvas && dayData) {
         const dCtx = dayCanvas.getContext('2d');
-        MoonRenderer.render(dCtx, 20, 20, dayMoonData, state.location);
+        MoonRenderer.render(dCtx, 20, 20, dayData, state.location);
       }
 
-      cell.addEventListener('click', () => {
-        state.selectedDate = cellDate;
-        // Re-render selection styles
-        document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('selected'));
-        cell.classList.add('selected');
-        renderEventsList();
+      // Dual-Tap Journaling Logic
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetZenIdleTimer();
+
+        if (isSameDay(date, state.selectedDate)) {
+          // Second tap on already selected date -> Open Note Editor!
+          openNoteEditor(date);
+        } else {
+          // First tap -> Select date and update event list & note preview
+          state.selectedDate = date;
+          updateSelectedDateView();
+        }
       });
 
       elements.calendarDaysGrid.appendChild(cell);
+    });
+
+    renderSelectedDateEventsAndNote();
+  }
+
+  function updateSelectedDateView() {
+    // Re-render grid cell classes
+    const days = state.currentCycleData ? state.currentCycleData.days : [];
+    const cellElements = elements.calendarDaysGrid.querySelectorAll('.day-cell');
+
+    cellElements.forEach((cell, idx) => {
+      if (idx < days.length) {
+        const date = days[idx];
+        const isSelected = isSameDay(date, state.selectedDate);
+        const dayOfWeek = date.getDay();
+        const isMonday = (dayOfWeek === 1);
+        const isSunday = (dayOfWeek === 0);
+
+        cell.className = 'day-cell';
+        if (isSelected) cell.classList.add('selected');
+        else if (isMonday) cell.classList.add('monday');
+        else if (isSunday) cell.classList.add('sunday');
+      }
+    });
+
+    renderSelectedDateEventsAndNote();
+  }
+
+  function renderSelectedDateEventsAndNote() {
+    const d = state.selectedDate;
+    const dateKey = toDateKey(d);
+
+    const monthFull = d.toLocaleString('en', { month: 'long' });
+    elements.eventsDateTitle.textContent = `Events for ${monthFull} ${d.getDate()}, ${d.getFullYear()}`;
+
+    // Note preview snippet
+    const noteEntry = getNoteEntry(dateKey);
+    if (noteEntry && noteEntry.text) {
+      elements.calendarNotePreview.style.display = 'block';
+      elements.notePreviewText.textContent = noteEntry.text;
+    } else {
+      elements.calendarNotePreview.style.display = 'none';
+      elements.notePreviewText.textContent = '';
     }
 
-    renderEventsList();
-  }
-
-  function isSameDay(d1, d2) {
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
-  }
-
-  // Render Events List for Selected Date
-  function renderEventsList() {
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const d = state.selectedDate;
-    elements.eventsDateTitle.textContent = `Events for ${monthNames[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-
-    const dayEvents = state.calendarEvents.filter(e => isSameDay(e.dateTime, d));
+    // Daily events list
     elements.eventsListContainer.innerHTML = '';
+    const dayEvents = (state.currentCycleData ? state.currentCycleData.events : [])
+      .filter(e => isSameDay(e.dateTime, d));
 
     if (dayEvents.length === 0) {
       const msg = document.createElement('div');
@@ -360,11 +501,10 @@
 
         const canvas = document.createElement('canvas');
         canvas.className = 'event-card-canvas';
-        canvas.width = 40;
-        canvas.height = 40;
+        canvas.width = 36;
+        canvas.height = 36;
         const cCtx = canvas.getContext('2d');
-        MoonRenderer.render(cCtx, 40, 40, eventMoonData, state.location);
-
+        MoonRenderer.render(cCtx, 36, 36, eventMoonData, state.location);
         card.appendChild(canvas);
       } else {
         const iconWrap = document.createElement('div');
@@ -397,7 +537,278 @@
     }
   }
 
-  // Populate City Picker Modal Dropdown
+  // Next & Previous Synodic Cycles (Jump by 2 days past cycle boundaries)
+  function nextCycle() {
+    if (!state.currentCycleData || !state.currentCycleData.cycleEnd) return;
+    const currentEnd = state.currentCycleData.cycleEnd.dateTime;
+    const nextRef = new Date(currentEnd.getTime() + 2 * 86400000);
+    state.currentReferenceDate = nextRef;
+    loadAndRenderSynodicCalendar();
+  }
+
+  function previousCycle() {
+    if (!state.currentCycleData || !state.currentCycleData.cycleStart) return;
+    const currentStart = state.currentCycleData.cycleStart.dateTime;
+    const prevRef = new Date(currentStart.getTime() - 2 * 86400000);
+    state.currentReferenceDate = prevRef;
+    loadAndRenderSynodicCalendar();
+  }
+
+  // ==========================================
+  // FULL-SCREEN DAILY NOTE EDITOR
+  // ==========================================
+  function openNoteEditor(date) {
+    state.isEditingNote = true;
+    resetZenIdleTimer();
+
+    const today = new Date();
+    const isToday = isSameDay(date, today);
+    elements.noteEditorHeadline.textContent = isToday ? "Today's Note" : "Daily Note";
+
+    const monthFull = date.toLocaleString('en', { month: 'long' });
+    elements.noteEditorSubtitle.textContent = `${monthFull} ${date.getDate()}, ${date.getFullYear()}`;
+
+    const dateKey = toDateKey(date);
+    const existing = getNoteEntry(dateKey);
+    elements.noteTextarea.value = existing ? existing.text : '';
+
+    elements.noteEditorOverlay.classList.add('active');
+    setTimeout(() => elements.noteTextarea.focus(), 50);
+  }
+
+  function closeNoteEditor() {
+    state.isEditingNote = false;
+    elements.noteEditorOverlay.classList.remove('active');
+    loadAndRenderSynodicCalendar();
+    resetZenIdleTimer();
+  }
+
+  // ==========================================
+  // DATA PORTABILITY: JSONL BACKUP & RESTORE
+  // ==========================================
+  function exportNotesJsonl() {
+    const lines = [];
+    Object.keys(state.notes).sort().forEach(dateKey => {
+      const entry = state.notes[dateKey];
+      if (entry && entry.text) {
+        lines.push(JSON.stringify({
+          text: entry.text,
+          calendarDay: entry.calendarDay || dateKey,
+          dateWritten: entry.dateWritten || new Date().toISOString(),
+          lastUpdated: entry.lastUpdated || new Date().toISOString()
+        }));
+      }
+    });
+
+    const content = lines.join('\n');
+    downloadFile(content, 'application/jsonl', 'moon_notes.jsonl');
+  }
+
+  function importNotesJsonl(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/);
+        let importedCount = 0;
+
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (!trimmed) return;
+          const parsed = JSON.parse(trimmed);
+          if (parsed.calendarDay && parsed.text !== undefined) {
+            state.notes[parsed.calendarDay] = {
+              text: parsed.text,
+              calendarDay: parsed.calendarDay,
+              dateWritten: parsed.dateWritten || new Date().toISOString(),
+              lastUpdated: parsed.lastUpdated || new Date().toISOString()
+            };
+            importedCount++;
+          }
+        });
+
+        saveNotesToStorage();
+        if (state.activeScreen === 'calendar') loadAndRenderSynodicCalendar();
+        showStatusModal('Import Status', `JSONL Data fully loaded! Imported ${importedCount} notes.`);
+      } catch (err) {
+        showStatusModal('Import Status', 'Error: Invalid JSONL backup file format.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ==========================================
+  // CALENDAR SYNC: ICAL (.ICS) EXPORT & IMPORT
+  // ==========================================
+  function exportIcal() {
+    // Generate .ics matching IcsExporter.kt
+    const events = (state.currentCycleData ? state.currentCycleData.events : []);
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Moon Cycle//Lunar Events//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH'
+    ];
+
+    const formatIcsDateTime = (d) => {
+      const yr = String(d.getUTCFullYear()).padStart(4, '0');
+      const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const da = String(d.getUTCDate()).padStart(2, '0');
+      const ho = String(d.getUTCHours()).padStart(2, '0');
+      const mi = String(d.getUTCMinutes()).padStart(2, '0');
+      const se = String(d.getUTCSeconds()).padStart(2, '0');
+      return `${yr}${mo}${da}T${ho}${mi}${se}Z`;
+    };
+
+    // Export Lunar Events
+    events.forEach(evt => {
+      lines.push('BEGIN:VEVENT');
+      const dtStart = formatIcsDateTime(evt.dateTime);
+      const endD = new Date(evt.dateTime.getTime() + 3600000);
+      const dtEnd = formatIcsDateTime(endD);
+      lines.push(`DTSTART:${dtStart}`);
+      lines.push(`DTEND:${dtEnd}`);
+      lines.push(`SUMMARY:${Astronomy.formatEventName(evt)}`);
+      lines.push('DESCRIPTION:Lunar event calculated by Moon Cycle App');
+      lines.push(`GEO:${state.location.latitude};${state.location.longitude}`);
+      lines.push('STATUS:CONFIRMED');
+      lines.push('TRANSP:OPAQUE');
+      lines.push('END:VEVENT');
+    });
+
+    // Export Daily Notes as VEVENTs
+    Object.keys(state.notes).forEach(dateKey => {
+      const entry = state.notes[dateKey];
+      if (entry && entry.text) {
+        const parts = dateKey.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const dStart = new Date(Date.UTC(year, month, day, 9, 0, 0));
+        const dEnd = new Date(Date.UTC(year, month, day, 10, 0, 0));
+
+        lines.push('BEGIN:VEVENT');
+        lines.push(`DTSTART:${formatIcsDateTime(dStart)}`);
+        lines.push(`DTEND:${formatIcsDateTime(dEnd)}`);
+        lines.push('SUMMARY:Lunar Reflection Note');
+        lines.push(`DESCRIPTION:${entry.text.replace(/\n/g, '\\n')}`);
+        lines.push('STATUS:CONFIRMED');
+        lines.push('END:VEVENT');
+      }
+    });
+
+    lines.push('END:VCALENDAR');
+    downloadFile(lines.join('\r\n'), 'text/calendar', 'lunar_notes.ics');
+  }
+
+  function importIcal(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const vevents = content.split('BEGIN:VEVENT');
+        let importedCount = 0;
+
+        for (let i = 1; i < vevents.length; i++) {
+          const chunk = vevents[i].split('END:VEVENT')[0];
+          let dtStart = '';
+          let desc = '';
+          let summary = '';
+
+          const lines = chunk.split(/\r?\n/);
+          lines.forEach(l => {
+            if (l.startsWith('DTSTART:')) dtStart = l.replace('DTSTART:', '').trim();
+            else if (l.startsWith('DESCRIPTION:')) desc = l.replace('DESCRIPTION:', '').trim().replace(/\\n/g, '\n');
+            else if (l.startsWith('SUMMARY:')) summary = l.replace('SUMMARY:', '').trim();
+          });
+
+          if (dtStart && (desc || summary)) {
+            // Parse YYYYMMDD
+            const y = dtStart.substring(0, 4);
+            const m = dtStart.substring(4, 6);
+            const d = dtStart.substring(6, 8);
+            if (y && m && d) {
+              const dateKey = `${y}-${m}-${d}`;
+              const noteText = desc && !desc.startsWith('Lunar event') ? desc : summary;
+              if (noteText) {
+                state.notes[dateKey] = {
+                  text: noteText,
+                  calendarDay: dateKey,
+                  dateWritten: new Date().toISOString(),
+                  lastUpdated: new Date().toISOString()
+                };
+                importedCount++;
+              }
+            }
+          }
+        }
+
+        saveNotesToStorage();
+        if (state.activeScreen === 'calendar') loadAndRenderSynodicCalendar();
+        showStatusModal('Import Status', `iCal Data fully imported! Found ${importedCount} entries.`);
+      } catch (err) {
+        showStatusModal('Import Status', 'Error: Invalid iCal file format.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ==========================================
+  // WALLPAPER GENERATOR
+  // ==========================================
+  function generateWallpaper() {
+    if (!state.currentMoonData) return;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 1080;
+    offscreen.height = 1920;
+    const ctx = offscreen.getContext('2d');
+
+    // Stark black background
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 1080, 1920);
+
+    // Center Moon
+    MoonRenderer.render(ctx, 1080, 1920, state.currentMoonData, state.location);
+
+    const dataUrl = offscreen.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `moon_wallpaper_${toDateKey(new Date())}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // Helper to trigger browser file download
+  function downloadFile(content, mimeType, fileName) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ==========================================
+  // STATUS MODAL DIALOG
+  // ==========================================
+  function showStatusModal(title, message) {
+    elements.statusModalTitle.textContent = title;
+    elements.statusModalMessage.textContent = message;
+    elements.statusModal.classList.add('active');
+  }
+
+  function closeStatusModal() {
+    elements.statusModal.classList.remove('active');
+  }
+
+  // ==========================================
+  // LOCATION PICKER MODAL
+  // ==========================================
   function populateCities() {
     elements.citySelect.innerHTML = '<option value="" disabled selected>Select a City</option>';
     CITIES.forEach(city => {
@@ -428,7 +839,7 @@
       closeLocationModal();
       updateMoon();
       if (state.activeScreen === 'details') renderDetailsScreen();
-      if (state.activeScreen === 'calendar') renderCalendarScreen();
+      if (state.activeScreen === 'calendar') loadAndRenderSynodicCalendar();
     }
   }
 
@@ -439,13 +850,13 @@
           state.location = {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
-            name: "My Location",
+            name: "Current Location",
             isDefault: false
           };
           closeLocationModal();
           updateMoon();
           if (state.activeScreen === 'details') renderDetailsScreen();
-          if (state.activeScreen === 'calendar') renderCalendarScreen();
+          if (state.activeScreen === 'calendar') loadAndRenderSynodicCalendar();
         },
         (err) => {
           alert('Could not retrieve device location: ' + err.message);
@@ -457,36 +868,37 @@
     }
   }
 
-  // Keyboard Shortcuts
-  function initKeyboard() {
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        if (elements.locationModal.classList.contains('active')) {
-          closeLocationModal();
-        } else if (state.activeScreen !== 'main') {
-          navigateTo('main');
-        }
-      } else if (e.key === 'c' || e.key === 'C') {
-        if (state.activeScreen === 'calendar') navigateTo('main');
-        else navigateTo('calendar');
-      } else if (e.key === 'd' || e.key === 'D') {
-        if (state.activeScreen === 'details') navigateTo('main');
-        else navigateTo('details');
-      } else if (e.key === ' ') {
-        toggleUi();
-      }
-    });
-  }
-
-  // Setup Event Listeners
+  // ==========================================
+  // EVENT LISTENERS & USER INTERACTIONS
+  // ==========================================
   function initEvents() {
-    // Ambient UI tap
-    elements.mainScreen.addEventListener('click', (e) => {
-      // If clicking interactive controls, don't just toggle
-      if (e.target.closest('button') || e.target.closest('.location-badge') || e.target.closest('.modal-card')) {
-        return;
-      }
-      showUiWithTimer();
+    // Global User Interaction Reset for 60s Zen Idle Timer
+    ['click', 'touchstart', 'mousemove', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, () => resetZenIdleTimer(), { passive: true });
+    });
+
+    // Tap-First Navigation on Main Screen
+    // 1. Central Moon Canvas tap -> Open Calendar
+    elements.mainMoonContainer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigateTo('calendar');
+    });
+
+    // 2. Phase Header / Countdown tap -> Open Details
+    elements.mainPhaseContainer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigateTo('details');
+    });
+
+    elements.mainFooterContainer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigateTo('details');
+    });
+
+    // 3. Top-left 64px discrete target -> Toggle UI
+    elements.touchTargetTopLeft.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleUi();
     });
 
     elements.btnToggleText.addEventListener('click', (e) => {
@@ -499,48 +911,88 @@
       navigateTo('calendar');
     });
 
-    elements.detailsBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      navigateTo('details');
+    // Main screen ambient UI show on blank canvas area click
+    elements.mainScreen.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('.corner-touch-target')) return;
+      showUiWithTimer();
     });
 
+    // Details Screen Actions
     elements.btnDetailsBack.addEventListener('click', () => navigateTo('main'));
-    elements.btnCalendarBack.addEventListener('click', () => navigateTo('main'));
+    elements.btnOpenLocationPicker.addEventListener('click', openLocationModal);
 
-    // Location Modal
-    elements.locationBadge.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openLocationModal();
+    elements.btnDownloadJsonl.addEventListener('click', exportNotesJsonl);
+    elements.btnUploadJsonl.addEventListener('click', () => elements.inputUploadJsonl.click());
+    elements.inputUploadJsonl.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        importNotesJsonl(e.target.files[0]);
+        e.target.value = '';
+      }
     });
 
+    elements.btnExportIcal.addEventListener('click', exportIcal);
+    elements.btnImportIcal.addEventListener('click', () => elements.inputUploadIcal.click());
+    elements.inputUploadIcal.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        importIcal(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+
+    elements.btnDownloadWallpaper.addEventListener('click', generateWallpaper);
+
+    // Calendar Screen Actions
+    elements.btnCalendarBack.addEventListener('click', () => navigateTo('main'));
+    elements.btnPrevCycle.addEventListener('click', previousCycle);
+    elements.btnNextCycle.addEventListener('click', nextCycle);
+    elements.btnCalendarShowDetails.addEventListener('click', () => navigateTo('details'));
+    elements.btnEditNoteDirect.addEventListener('click', () => openNoteEditor(state.selectedDate));
+
+    // Note Editor Actions
+    elements.btnCloseNote.addEventListener('click', closeNoteEditor);
+    elements.noteTextarea.addEventListener('input', () => {
+      resetZenIdleTimer();
+      const dateKey = toDateKey(state.selectedDate);
+      saveNoteText(dateKey, elements.noteTextarea.value);
+    });
+
+    // Location Picker Modal Actions
+    elements.citySelect.addEventListener('change', (e) => {
+      if (e.target.value) setManualCity(e.target.value);
+    });
+    elements.btnUseGps.addEventListener('click', requestGpsLocation);
     elements.btnModalCancel.addEventListener('click', closeLocationModal);
     elements.locationModal.addEventListener('click', (e) => {
       if (e.target === elements.locationModal) closeLocationModal();
     });
 
-    elements.citySelect.addEventListener('change', (e) => {
-      if (e.target.value) setManualCity(e.target.value);
+    // Status Modal Actions
+    elements.btnStatusModalOk.addEventListener('click', closeStatusModal);
+    elements.statusModal.addEventListener('click', (e) => {
+      if (e.target === elements.statusModal) closeStatusModal();
     });
 
-    elements.btnUseGps.addEventListener('click', requestGpsLocation);
-
-    // Calendar Month Navigation
-    elements.btnPrevMonth.addEventListener('click', () => {
-      state.calendarMonth--;
-      if (state.calendarMonth < 1) {
-        state.calendarMonth = 12;
-        state.calendarYear--;
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (elements.statusModal.classList.contains('active')) {
+          closeStatusModal();
+        } else if (elements.locationModal.classList.contains('active')) {
+          closeLocationModal();
+        } else if (state.isEditingNote) {
+          closeNoteEditor();
+        } else if (state.activeScreen !== 'main') {
+          navigateTo('main');
+        }
+      } else if (!state.isEditingNote) {
+        if (e.key === 'c' || e.key === 'C') {
+          navigateTo(state.activeScreen === 'calendar' ? 'main' : 'calendar');
+        } else if (e.key === 'd' || e.key === 'D') {
+          navigateTo(state.activeScreen === 'details' ? 'main' : 'details');
+        } else if (e.key === ' ') {
+          toggleUi();
+        }
       }
-      renderCalendarScreen();
-    });
-
-    elements.btnNextMonth.addEventListener('click', () => {
-      state.calendarMonth++;
-      if (state.calendarMonth > 12) {
-        state.calendarMonth = 1;
-        state.calendarYear++;
-      }
-      renderCalendarScreen();
     });
 
     // Resize handling
@@ -549,19 +1001,22 @@
       if (state.activeScreen === 'details') renderDetailsScreen();
     });
 
-    // Periodic time check (e.g. every minute to update countdown & real-time angles)
+    // Real-time clock update (every 60 seconds)
     setInterval(() => {
       if (state.activeScreen === 'main') updateMoon();
     }, 60000);
   }
 
-  // Bootstrap Application
+  // ==========================================
+  // APPLICATION BOOTSTRAP
+  // ==========================================
   function init() {
+    loadNotesFromStorage();
     populateCities();
     initEvents();
-    initKeyboard();
     updateMoon();
-    resetIdleTimer();
+    resetZenIdleTimer();
+    showUiWithTimer();
 
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
@@ -569,7 +1024,6 @@
     }
   }
 
-  // Run on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

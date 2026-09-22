@@ -97,34 +97,6 @@ class MoonDetailViewModel(
                 append("END:VEVENT\n")
             }
 
-            val currentLoc = LocationRepository.DEFAULT_LOCATION // Simplified for export
-            var currentDay = LocalDate(2026, 9, 17)
-            val endDay = LocalDate(2031, 9, 17)
-            
-            while (currentDay.toEpochDays() < endDay.toEpochDays()) {
-                val moonCalc = astronomyRepository.getBasicMoonData(currentDay, currentLoc)
-                val dayStr = currentDay.toString().replace("-", "")
-                
-                if (moonCalc.phase == MoonPhase.FULL) {
-                    append("BEGIN:VEVENT\n")
-                    append("UID:lunar-full-${currentDay}@com.example.moon\n")
-                    append("SUMMARY:🌕 Full Moon\n")
-                    append("DESCRIPTION:The moon is completely illuminated by the sun.\n")
-                    append("DTSTART;VALUE=DATE:").append(dayStr).append("\n")
-                    append("DTEND;VALUE=DATE:").append(dayStr).append("\n")
-                    append("END:VEVENT\n")
-                } else if (moonCalc.phase == MoonPhase.NEW) {
-                    append("BEGIN:VEVENT\n")
-                    append("UID:lunar-new-${currentDay}@com.example.moon\n")
-                    append("SUMMARY:🌑 New Moon\n")
-                    append("DESCRIPTION:The moon is in alignment between the earth and sun.\n")
-                    append("DTSTART;VALUE=DATE:").append(dayStr).append("\n")
-                    append("DTEND;VALUE=DATE:").append(dayStr).append("\n")
-                    append("END:VEVENT\n")
-                }
-                currentDay = LocalDate.fromEpochDays(currentDay.toEpochDays() + 1)
-            }
-            
             append("END:VCALENDAR")
         }
     }

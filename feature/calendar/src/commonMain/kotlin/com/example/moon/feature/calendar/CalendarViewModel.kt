@@ -41,7 +41,14 @@ class CalendarViewModel(
         }
     }
 
+    private var currentReferenceDate: LocalDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+
+    fun updateLocation(location: LocationData) {
+        loadEvents(currentReferenceDate, location)
+    }
+
     fun loadEvents(referenceDate: LocalDate, location: LocationData) {
+        currentReferenceDate = referenceDate
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             
@@ -57,11 +64,13 @@ class CalendarViewModel(
             }
 
             // 2. Load all events in this lunar cycle
+
             val events = astronomyRepository.getLunarEventsInRange(prevNewMoon.dateTime, nextNewMoon.dateTime, location)
             
             // 3. Load daily data for each day in the cycle
             val dailyMoonData = mutableMapOf<LocalDate, MoonData>()
-            var current = prevNewMoon.dateTime.date
+            val currentA = prevNewMoon.dateTime.date
+            var current = currentA.minus(1, DateTimeUnit.DAY)
             val end = nextNewMoon.dateTime.date
             
             while (current <= end) {

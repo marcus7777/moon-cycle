@@ -43,13 +43,11 @@ const MoonRenderer = (() => {
     ctx.save();
     ctx.clearRect(0, 0, width, height);
 
-    // Apply orientation transforms around the moon's center
+    // Apply orientation transforms around the moon's center (matching MoonVectorEngine.kt)
     ctx.translate(cx, cy);
-    if (tiltAngle) {
-      ctx.rotate(tiltAngle * Math.PI / 180.0);
-    }
-    if (isSouthern) {
-      ctx.scale(-1, 1);
+    const rotation = isSouthern ? (tiltAngle + 180) : tiltAngle;
+    if (rotation) {
+      ctx.rotate(rotation * Math.PI / 180.0);
     }
     ctx.translate(-cx, -cy);
 

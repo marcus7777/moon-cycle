@@ -1,5 +1,6 @@
 package com.example.moon.feature.calendar
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -48,8 +49,31 @@ fun CalendarScreen(
     var selectedDate by remember { mutableStateOf(today) }
     var isEditing by remember { mutableStateOf(false) }
     
+    var isInitialLoad by remember { mutableStateOf(true) }
+    
     LaunchedEffect(locationData) {
-        viewModel.loadEvents(today, locationData)
+        if (isInitialLoad) {
+            viewModel.loadEvents(today, locationData)
+            isInitialLoad = false
+        } else {
+            viewModel.updateLocation(locationData)
+        }
+    }
+
+    var previousCycleStart by remember { mutableStateOf<LunarEvent?>(null) }
+
+    LaunchedEffect(uiState.cycleStart) {
+        val currentStart = uiState.cycleStart
+        val prevStart = previousCycleStart
+        if (currentStart != null && prevStart != null && currentStart != prevStart) {
+            val oldStartDate = prevStart.dateTime.date
+            val newStartDate = currentStart.dateTime.date
+            val offset = selectedDate.toEpochDays() - oldStartDate.toEpochDays()
+            val newDate = newStartDate.plus(offset, DateTimeUnit.DAY)
+            val end = uiState.cycleEnd?.dateTime?.date
+            selectedDate = if (end != null && newDate > end) end else newDate
+        }
+        previousCycleStart = currentStart
     }
     
     Scaffold(
@@ -78,7 +102,69 @@ fun CalendarScreen(
                 }
         ) {
             if (isEditing) {
-                // ... (Editing UI remains same)
+                val currentNote = uiState.notes[selectedDate] ?: ""
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .background(Color.Black.copy(alpha = 0.8f))
+                        .padding(24.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val monthName = selectedDate.month.name.lowercase().replaceFirstChar { it.uppercase() }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (selectedDate == today) "Today's Note" else "Daily Note",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "$monthName ${selectedDate.dayOfMonth}, ${selectedDate.year}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Gray
+                            )
+                        }
+                        IconButton(onClick = { isEditing = false }) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    TextField(
+                        value = currentNote,
+                        onValueChange = { 
+                            onInteraction()
+                            viewModel.saveNote(selectedDate, it, locationData) 
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        placeholder = {
+                            Text(
+                                text = "Type your daily thoughts and reflections here...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White.copy(alpha = 0.3f)
+                            )
+                        },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = Color.White,
+                            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
+                    )
+                }
             } else {
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize()
@@ -162,6 +248,7 @@ fun CalendarScreen(
                                 onSaveNote = { date, note -> viewModel.saveNote(date, note) },
                                 locationData = locationData,
                                 showTextField = false,
+                                onShowDetails = onShowDetails,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -219,13 +306,6 @@ fun CycleHeader(
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            if (start != null) {
-                Text(
-                    text = "Starts ${start.dayOfMonth} ${start.month.name.lowercase().take(3)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray
-                )
-            }
         }
         
         Spacer(modifier = Modifier.width(8.dp))
@@ -243,7 +323,8 @@ fun LunarCalendarGrid(
     onDateSelected: (LocalDate) -> Unit,
     locationData: LocationData
 ) {
-    val start = uiState.cycleStart?.dateTime?.date ?: return
+    val startA = uiState.cycleStart?.dateTime?.date ?: return
+    val start = startA.minus(1, DateTimeUnit.DAY)
     val end = uiState.cycleEnd?.dateTime?.date ?: return
     
     val days = mutableListOf<LocalDate>()
@@ -269,7 +350,7 @@ fun LunarCalendarGrid(
                             val moonData = uiState.dailyMoonData[date]
                             
                             DayCell(
-                                day = date.dayOfMonth,
+                                date = date,
                                 isSelected = isSelected,
                                 events = dayEvents,
                                 moonData = moonData,
@@ -289,7 +370,7 @@ fun LunarCalendarGrid(
 
 @Composable
 fun DayCell(
-    day: Int,
+    date: LocalDate,
     isSelected: Boolean,
     events: List<LunarEvent>,
     moonData: MoonData?,
@@ -297,12 +378,27 @@ fun DayCell(
     onDateSelected: () -> Unit,
     locationData: LocationData
 ) {
+    val isMonday = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        date.dayOfWeek == DayOfWeek.MONDAY
+    } else {
+        TODO("VERSION.SDK_INT < O")
+    }
+
+    val isSunday = date.dayOfWeek == DayOfWeek.SUNDAY
+
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(1.dp)
             .clip(CircleShape)
-            .background(if (isSelected) Color.White else Color.Transparent)
+            .background(
+                when {
+                    isSelected -> Color.White
+                    isMonday -> Color(0xFFC0C0C0).copy(alpha = 0.25f)
+                    isSunday -> Color(0xFFCCBA78).copy(alpha = 0.25f)
+                    else -> Color.Transparent
+                }
+            )
             .clickable { onDateSelected() },
         contentAlignment = Alignment.Center
     ) {
@@ -319,7 +415,7 @@ fun DayCell(
         
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
-                text = day.toString(),
+                text = date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (isSelected) Color.Black else Color.White,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -410,15 +506,7 @@ fun EventList(
             }
         }
         
-        if (dayEvents.isEmpty()) {
-            item {
-                Text(
-                    text = "No major lunar events",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
-            }
-        } else {
+        if (!dayEvents.isEmpty()) {
             items(dayEvents) { event ->
                 EventItem(event = event, locationData = locationData)
             }

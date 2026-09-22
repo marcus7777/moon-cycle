@@ -79,7 +79,7 @@ html, body {
 }
 
 /* ===================================================================
-   MAIN SCREEN
+   MAIN SCREEN (Zen Mode Gateway)
    =================================================================== */
 #screen-main {
   justify-content: space-between;
@@ -87,13 +87,13 @@ html, body {
   padding: env(safe-area-inset-top, 16px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 24px) env(safe-area-inset-left, 16px);
 }
 
-/* Moon Canvas Wrapper (Persistent Center) */
+/* Moon Canvas Wrapper (Persistent Center Hero - 85% scale) */
 .moon-canvas-container {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(85vw, 420px);
+  width: min(85vw, 85vh, 520px);
   aspect-ratio: 1;
   display: flex;
   align-items: center;
@@ -105,7 +105,7 @@ html, body {
 #main-moon-canvas {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.05));
+  filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.05));
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -134,6 +134,17 @@ html, body {
   pointer-events: auto;
 }
 
+/* Discrete 64px touch target top-left for toggling UI */
+.corner-touch-target {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 64px;
+  height: 64px;
+  z-index: 10;
+  cursor: pointer;
+}
+
 /* Top Action Bar */
 .top-bar {
   display: flex;
@@ -154,7 +165,7 @@ html, body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0.8;
+  opacity: 0.85;
   transition: opacity 0.2s, background-color 0.2s;
 }
 
@@ -169,7 +180,7 @@ html, body {
   fill: currentColor;
 }
 
-/* Header Content (Location & Phase Name) */
+/* Header Content (Tap -> Details) */
 .main-header {
   display: flex;
   flex-direction: column;
@@ -178,85 +189,46 @@ html, body {
   text-align: center;
 }
 
-.location-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background-color: var(--surface-card);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  font-weight: 500;
+.clickable-header {
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  margin-bottom: 12px;
-  transition: background-color 0.2s, transform 0.1s;
+  transition: opacity 0.2s;
 }
 
-.location-badge:hover {
-  background-color: var(--surface-card-hover);
-}
-
-.location-badge:active {
-  transform: scale(0.97);
-}
-
-.location-badge svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
+.clickable-header:hover {
+  opacity: 0.9;
 }
 
 .phase-title {
-  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--text-primary);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
-/* Bottom Actions & Countdown */
+/* Bottom Actions & Countdown (Tap -> Details) */
 .main-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: max(16px, env(safe-area-inset-bottom));
+  margin-bottom: max(24px, env(safe-area-inset-bottom));
   text-align: center;
 }
 
-.event-countdown {
-  font-size: 1rem;
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-  font-weight: 400;
-}
-
-.primary-btn {
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
-  padding: 12px 28px;
-  border-radius: var(--radius-full);
-  font-size: 0.95rem;
-  font-weight: 500;
+.clickable-footer {
   cursor: pointer;
-  backdrop-filter: blur(12px);
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  transition: opacity 0.2s;
 }
 
-.primary-btn:hover {
-  background-color: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.35);
-  transform: translateY(-1px);
+.clickable-footer:hover {
+  opacity: 0.9;
 }
 
-.primary-btn:active {
-  transform: translateY(0);
+.event-countdown {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 /* ===================================================================
@@ -292,7 +264,7 @@ html, body {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
 }
 
 .detail-hero {
@@ -323,10 +295,43 @@ html, body {
   color: var(--text-secondary);
 }
 
+/* Viewing From Location Row */
+.detail-location-card {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.detail-location-card:hover {
+  opacity: 0.85;
+}
+
+.detail-location-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.detail-location-name {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.edit-icon {
+  width: 14px;
+  height: 14px;
+  fill: var(--text-secondary);
+}
+
 .detail-grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .detail-item {
@@ -350,8 +355,130 @@ html, body {
   color: var(--text-primary);
 }
 
+/* Data Sections (JSONL Backup, Calendar Sync, Wallpaper) */
+.section-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.section-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.section-card-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.action-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.action-btn.full-width {
+  width: 100%;
+}
+
+/* Wallpaper Switch Row */
+.wallpaper-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallpaper-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.wallpaper-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: .3s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: #ffffff;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: #000000;
+}
+
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
 /* ===================================================================
-   CALENDAR SCREEN
+   CALENDAR SCREEN (Synodic Cycle Grid)
    =================================================================== */
 #screen-calendar {
   padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)) 12px;
@@ -367,29 +494,21 @@ html, body {
   height: 100%;
 }
 
-.month-nav {
+.cycle-nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  padding: 0 4px;
 }
 
-.month-label {
-  font-size: 1.3rem;
+.cycle-label {
+  font-size: 1.25rem;
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-/* Calendar Grid */
-.calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--text-tertiary);
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
+/* Calendar Days Grid (7 continuous columns) */
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -410,17 +529,28 @@ html, body {
 }
 
 .day-cell:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
+/* Monday: Silver Tint */
+.day-cell.monday {
+  background-color: rgba(192, 192, 192, 0.25);
+}
+
+/* Sunday: Gold Tint */
+.day-cell.sunday {
+  background-color: rgba(204, 186, 120, 0.25);
+}
+
+/* Selected State: Pure Stark White circle with black text */
 .day-cell.selected {
-  background-color: #ffffff;
+  background-color: #ffffff !important;
   color: #000000 !important;
 }
 
-.day-cell.empty {
-  cursor: default;
-  pointer-events: none;
+.day-cell.selected .day-number {
+  color: #000000 !important;
+  font-weight: 700;
 }
 
 .day-number {
@@ -428,15 +558,23 @@ html, body {
   font-weight: 600;
   line-height: 1;
   margin-bottom: 2px;
-}
-
-.day-cell.selected .day-number {
-  color: #000000;
+  color: var(--text-primary);
 }
 
 .day-moon-canvas {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Yellow Note Dot Indicator (Top-Right) */
+.day-note-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #ffd700;
 }
 
 .day-event-dot {
@@ -451,7 +589,7 @@ html, body {
   background-color: #000000;
 }
 
-/* Events List */
+/* Events List & Note Preview Section */
 .events-divider {
   width: 100%;
   height: 1px;
@@ -465,6 +603,76 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.note-preview-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 4px;
+}
+
+.note-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.note-preview-tag {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.note-edit-link {
+  background: transparent;
+  border: none;
+  color: #90caf9;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.note-preview-body {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  max-height: 4.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+
+.calendar-details-shortcut {
+  margin-bottom: 6px;
+}
+
+.text-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #90caf9;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.text-link-btn:hover {
+  text-decoration: underline;
+}
+
+.text-link-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
 .events-title {
@@ -522,11 +730,84 @@ html, body {
 .no-events-msg {
   color: var(--text-tertiary);
   font-size: 0.9rem;
-  padding: 12px 0;
+  padding: 8px 0;
 }
 
 /* ===================================================================
-   LOCATION PICKER MODAL
+   FULL-SCREEN DAILY NOTE EDITOR OVERLAY
+   =================================================================== */
+.note-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  background-color: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(16px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.note-editor-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.note-editor-container {
+  width: 100%;
+  max-width: 680px;
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)) 24px;
+}
+
+.note-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.note-editor-headline {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.note-editor-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.note-textarea {
+  flex: 1;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  caret-color: #ffffff;
+  user-select: text;
+}
+
+.note-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ===================================================================
+   MODAL DIALOGS (Location Picker & Status Dialog)
    =================================================================== */
 .modal-overlay {
   position: fixed;
@@ -643,7 +924,7 @@ html, body {
 }
 
 /* ===================================================================
-   RESPONSIVE ADAPTATIONS (Widescreen / Tablet)
+   RESPONSIVE ADAPTATIONS (Landscape & Widescreen)
    =================================================================== */
 @media (min-width: 900px) {
   .screen {
@@ -655,6 +936,6 @@ html, body {
     transform: translateX(-50%) scale(1);
   }
   .moon-canvas-container {
-    width: 380px;
+    width: 480px;
   }
 }
