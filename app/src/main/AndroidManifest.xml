@@ -225,15 +225,43 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- 1x1 Moon Widget -->
         <receiver
-            android:name="com.example.moon.widget.MoonWidgetReceiver"
+            android:name="com.example.moon.widget.MoonWidget1x1Receiver"
+            android:label="@string/widget_1x1_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/moon_widget_info" />
+                android:resource="@xml/moon_widget_1x1_info" />
+        </receiver>
+
+        <!-- 2x2 Moon Widget -->
+        <receiver
+            android:name="com.example.moon.widget.MoonWidgetReceiver"
+            android:label="@string/widget_2x2_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/moon_widget_2x2_info" />
+        </receiver>
+
+        <!-- 3x3 Moon Widget -->
+        <receiver
+            android:name="com.example.moon.widget.MoonWidget3x3Receiver"
+            android:label="@string/widget_3x3_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/moon_widget_3x3_info" />
         </receiver>
 
     </application>

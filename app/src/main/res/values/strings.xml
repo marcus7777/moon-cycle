@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Moon Cycle</string>
+    <string name="widget_1x1_name">Moon (1x1)</string>
+    <string name="widget_1x1_description">Compact 1x1 moon phase widget</string>
+    <string name="widget_2x2_name">Moon (2x2)</string>
+    <string name="widget_2x2_description">Standard 2x2 moon phase widget</string>
+    <string name="widget_3x3_name">Moon (3x3)</string>
+    <string name="widget_3x3_description">Detailed 3x3 moon phase widget with info and stats</string>
 </resources>

@@ -63,9 +63,11 @@ class WallpaperWorker(
             val wallpaperManager = WallpaperManager.getInstance(context)
             wallpaperManager.setBitmap(bitmap)
             
-            // Also update the home screen widget
+            // Also update the home screen widgets
             try {
+                com.example.moon.widget.MoonWidget1x1().updateAll(context)
                 com.example.moon.widget.MoonWidget().updateAll(context)
+                com.example.moon.widget.MoonWidget3x3().updateAll(context)
             } catch (e: Exception) {
                 // Ignore widget update errors
             }
