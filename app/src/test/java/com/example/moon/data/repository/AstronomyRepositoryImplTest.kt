@@ -1,5 +1,6 @@
 package com.example.moon.data.repository
 
+import com.example.moon.core.data.repository.AstronomyRepositoryImpl
 import com.example.moon.core.domain.model.EventType
 import com.example.moon.core.domain.model.LocationData
 import org.junit.Assert.assertTrue

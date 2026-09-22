@@ -72,6 +72,16 @@ kotlin {
                 implementation(libs.junit)
             }
         }
+        
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.androidx.junit)
+                implementation(libs.androidx.runner)
+                implementation(libs.androidx.core)
+                implementation(libs.androidx.espresso.core)
+            }
+        }
     }
 }
 
