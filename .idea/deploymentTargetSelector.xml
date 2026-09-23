@@ -4,21 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-22T17:31:14.881796Z">
+        <DropdownSelection timestamp="2026-09-23T13:03:44.191265700Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\marcu\.android\avd\Small_Phone.avd" />
-            </handle>
-          </Target>
-        </DropdownSelection>
-        <DialogSelection />
-      </SelectionState>
-      <SelectionState runConfigName="New Run Config">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-13T20:08:13.953132600Z">
-          <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=R58NC47S0EA" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=D:\ANDROID_SDK_HOME\.android\avd\Wear_OS_Small_Round.avd" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -26,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="wear">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-22T17:29:43.946617900Z">
+        <DropdownSelection timestamp="2026-09-23T14:19:30.541801500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\marcu\.android\avd\Small_Phone.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=D:\ANDROID_SDK_HOME\.android\avd\Small_Phone.avd" />
             </handle>
           </Target>
         </DropdownSelection>

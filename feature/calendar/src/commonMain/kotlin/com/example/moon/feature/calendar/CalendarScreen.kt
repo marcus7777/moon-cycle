@@ -103,6 +103,14 @@ fun CalendarScreen(
         ) {
             if (isEditing) {
                 val currentNote = uiState.notes[selectedDate] ?: ""
+                val currentPrompt = remember(selectedDate, uiState.dailyMoonData) {
+                    val moonData = uiState.dailyMoonData[selectedDate]
+                    if (moonData != null) {
+                        IfsPromptProvider.getPromptForAge(moonData.age)
+                    } else {
+                        IfsPromptProvider.getPromptForDayOfMonth(selectedDate.dayOfMonth)
+                    }
+                }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -147,9 +155,9 @@ fun CalendarScreen(
                             .weight(1f),
                         placeholder = {
                             Text(
-                                text = "Type your daily thoughts and reflections here...",
+                                text = currentPrompt.fullText,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.3f)
+                                color = Color.White.copy(alpha = 0.4f)
                             )
                         },
                         textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -187,6 +195,7 @@ fun CalendarScreen(
                                     notes = uiState.notes,
                                     onSaveNote = { date, note -> viewModel.saveNote(date, note) },
                                     locationData = locationData,
+                                    dailyMoonData = uiState.dailyMoonData,
                                     showTextField = false,
                                     onShowDetails = onShowDetails,
                                     modifier = Modifier.weight(1.5f)
@@ -247,6 +256,7 @@ fun CalendarScreen(
                                 notes = uiState.notes,
                                 onSaveNote = { date, note -> viewModel.saveNote(date, note) },
                                 locationData = locationData,
+                                dailyMoonData = uiState.dailyMoonData,
                                 showTextField = false,
                                 onShowDetails = onShowDetails,
                                 modifier = Modifier.weight(1f)
@@ -448,12 +458,21 @@ fun EventList(
     notes: Map<LocalDate, String>,
     onSaveNote: (LocalDate, String) -> Unit,
     locationData: LocationData,
+    dailyMoonData: Map<LocalDate, MoonData> = emptyMap(),
     showTextField: Boolean = true,
     onShowDetails: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val dayEvents = events.filter { it.dateTime.date == selectedDate }
     val currentNote = notes[selectedDate] ?: ""
+    val currentPrompt = remember(selectedDate, dailyMoonData) {
+        val moonData = dailyMoonData[selectedDate]
+        if (moonData != null) {
+            IfsPromptProvider.getPromptForAge(moonData.age)
+        } else {
+            IfsPromptProvider.getPromptForDayOfMonth(selectedDate.dayOfMonth)
+        }
+    }
     
     LazyColumn(
         modifier = modifier
@@ -467,6 +486,13 @@ fun EventList(
                     value = currentNote,
                     onValueChange = { onSaveNote(selectedDate, it) },
                     label = { Text("Daily Note", color = Color.Gray) },
+                    placeholder = {
+                        Text(
+                            text = currentPrompt.fullText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.4f)
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
                     colors = OutlinedTextFieldDefaults.colors(

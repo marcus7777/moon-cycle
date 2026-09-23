@@ -3,7 +3,6 @@ package com.example.moon.util
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
-import com.example.moon.R
 import com.example.moon.core.domain.model.MoonPhase
 
 object IconManager {
@@ -35,37 +34,53 @@ object IconManager {
         val targetAlias = if (isSouthern) phaseToAliasS[currentPhase] else phaseToAliasN[currentPhase]
         if (targetAlias == null) return
 
-        val packageManager = context.packageManager
-        val componentName = ComponentName(context.packageName, targetAlias)
+        try {
+            val packageManager = context.packageManager
+            val mainActivityName = "com.example.moon.MainActivity"
+            val targetComponentName = ComponentName(context.packageName, targetAlias)
 
-        // Always ensure the target activity is enabled
-        packageManager.setComponentEnabledSetting(
-            ComponentName(context.packageName, "com.example.moon.MainActivity"),
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-            PackageManager.DONT_KILL_APP
-        )
+            val targetState = packageManager.getComponentEnabledSetting(targetComponentName)
+            val isTargetEnabled = if (targetAlias == mainActivityName) {
+                (targetState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) || (targetState == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)
+            } else {
+                targetState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            }
 
-        // If already enabled, do nothing
-        if (packageManager.getComponentEnabledSetting(componentName) == 
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
-            return
-        }
+            val allAliases = (phaseToAliasN.values + phaseToAliasS.values).filter { it != mainActivityName }
+            val aliasesToDisable = allAliases.filter { alias ->
+                alias != targetAlias && packageManager.getComponentEnabledSetting(ComponentName(context.packageName, alias)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            }
 
-        // Enable new alias
-        packageManager.setComponentEnabledSetting(
-            componentName,
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-            PackageManager.DONT_KILL_APP
-        )
+            if (isTargetEnabled && aliasesToDisable.isEmpty()) {
+                return
+            }
 
-        // Disable all other aliases (both N and S)
-        val allAliases = phaseToAliasN.values + phaseToAliasS.values
-        allAliases.filter { it != targetAlias }.forEach { alias ->
-            packageManager.setComponentEnabledSetting(
-                ComponentName(context.packageName, alias),
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                PackageManager.DONT_KILL_APP
-            )
+            val mainComponentName = ComponentName(context.packageName, mainActivityName)
+            if (packageManager.getComponentEnabledSetting(mainComponentName) != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                packageManager.setComponentEnabledSetting(
+                    mainComponentName,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            }
+
+            if (targetAlias != mainActivityName && !isTargetEnabled) {
+                packageManager.setComponentEnabledSetting(
+                    targetComponentName,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            }
+
+            aliasesToDisable.forEach { alias ->
+                packageManager.setComponentEnabledSetting(
+                    ComponentName(context.packageName, alias),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            }
+        } catch (_: Exception) {
+            // Ignore PackageManager errors to prevent startup crashes
         }
     }
 }
