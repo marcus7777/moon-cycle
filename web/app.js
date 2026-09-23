@@ -593,8 +593,9 @@
   ];
 
   function getIfsPromptForDate(date) {
-    if (typeof AstronomyEngine !== 'undefined' && AstronomyEngine.getMoonData) {
-      const moonData = AstronomyEngine.getMoonData(date, state.location.lat, state.location.lng);
+    if (typeof Astronomy !== 'undefined' && Astronomy.getMoonData) {
+      const loc = state.location || { lat: 51.5074, lng: -0.1278 };
+      const moonData = Astronomy.getMoonData(date, loc, false);
       if (moonData && typeof moonData.age === 'number') {
         const synodicDays = 29.53059;
         const normalized = ((moonData.age % synodicDays) + synodicDays) % synodicDays / synodicDays;

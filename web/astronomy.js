@@ -510,9 +510,11 @@ const Astronomy = (() => {
   }
 
   function getMoonData(date, location, includeDetails = true) {
+    const lat = (location && location.latitude !== undefined) ? location.latitude : (location ? location.lat : 0);
+    const lng = (location && location.longitude !== undefined) ? location.longitude : (location ? location.lng : 0);
     const jd = toJulianDate(date);
     const celestial = getCelestialData(jd);
-    const horizontal = calculateHorizontalPosition(celestial, location.latitude, location.longitude);
+    const horizontal = calculateHorizontalPosition(celestial, lat, lng);
     const phaseInfo = mapAngleToPhase(celestial.diffLong);
     const age = calculateMoonAge(celestial.diffLong);
 
@@ -520,7 +522,7 @@ const Astronomy = (() => {
     let nextEvent = null;
 
     if (includeDetails) {
-      horizonTimes = findHorizonEvents(date, location.latitude, location.longitude);
+      horizonTimes = findHorizonEvents(date, lat, lng);
       nextEvent = findNextMajorEvent(date);
     }
 
