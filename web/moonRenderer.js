@@ -129,7 +129,7 @@ const MoonRenderer = (() => {
     }
 
     // 4. Draw craters
-    drawCraters(ctx, radius, cx, cy, isWaxing, illumination, phase);
+    // drawCraters(ctx, radius, cx, cy, isWaxing, illumination, phase);
 
     // 5. Ambient rim light
     const rimGrad = ctx.createRadialGradient(cx, cy, radius * 0.92, cx, cy, radius);
