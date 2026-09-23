@@ -12,13 +12,6 @@
  */
 
 const MoonRenderer = (() => {
-  const craterSeeds = [
-    [0.2, 0.3], [-0.4, 0.1], [0.1, -0.5],
-    [-0.2, -0.3], [0.5, 0.4], [-0.6, -0.2],
-    [0.3, -0.1], [0.0, 0.6], [-0.3, 0.5],
-    [0.4, -0.4], [0.6, 0.1], [-0.1, -0.7],
-    [0.0, 0.0], [-0.5, -0.5], [0.7, 0.3]
-  ];
 
   /**
    * Render the moon onto a 2D canvas context.
@@ -128,10 +121,7 @@ const MoonRenderer = (() => {
       }
     }
 
-    // 4. Draw craters
-    // drawCraters(ctx, radius, cx, cy, isWaxing, illumination, phase);
-
-    // 5. Ambient rim light
+    // 4. Ambient rim light
     const rimGrad = ctx.createRadialGradient(cx, cy, radius * 0.92, cx, cy, radius);
     rimGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0)');
     rimGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.15)');
@@ -143,49 +133,6 @@ const MoonRenderer = (() => {
 
     ctx.restore(); // Restore clip
     ctx.restore(); // Restore transforms
-  }
-
-  function drawCraters(ctx, radius, cx, cy, isWaxing, illumination, phase) {
-    const craterShadow = 'rgba(0, 0, 0, 0.14)';
-    const craterHighlight = 'rgba(255, 255, 255, 0.09)';
-
-    const litEdgeX = isWaxing ? (0.5 - illumination) * 2.0 : (illumination - 0.5) * 2.0;
-
-    craterSeeds.forEach(([dx, dy]) => {
-      const x = cx + dx * radius;
-      const y = cy + dy * radius;
-
-      let isLit = false;
-      if (phase === 'FULL') {
-        isLit = true;
-      } else if (phase === 'NEW') {
-        isLit = false;
-      } else if (isWaxing) {
-        isLit = dx > litEdgeX;
-      } else {
-        isLit = dx < litEdgeX;
-      }
-
-      if (isLit) {
-        const distToEdge = Math.abs(dx - litEdgeX);
-        const terminatorMultiplier = Math.max(0.5, Math.min(1.5, 1.0 - distToEdge));
-
-        const cRadius = radius * (0.04 + Math.abs(dx * dy) * 0.08);
-        const shadowOffset = 1.5 * terminatorMultiplier;
-
-        // Shadow circle
-        ctx.fillStyle = craterShadow;
-        ctx.beginPath();
-        ctx.arc(x + shadowOffset, y + shadowOffset, cRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Highlight circle
-        ctx.fillStyle = craterHighlight;
-        ctx.beginPath();
-        ctx.arc(x - shadowOffset / 2, y - shadowOffset / 2, cRadius * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
   }
 
   /**
