@@ -51,4 +51,15 @@ class AstronomyRepositoryImplTest {
         assertTrue(events.any { it.type == EventType.FULL_MOON && it.dateTime.dayOfMonth == 18 })
         assertTrue(events.any { it.type == EventType.LAST_QUARTER && it.dateTime.dayOfMonth == 24 })
     }
+
+    @Test
+    fun getMoonData_moonAgeCorrectAtNewAndFullMoon() {
+        // Sep 3, 2024 is New Moon -> age should be near 0
+        val newMoonData = repository.getMoonData(LocalDateTime(2024, 9, 3, 12, 0), mockLocation)
+        assertTrue("New Moon age should be < 2.0 days, was ${newMoonData.age}", newMoonData.age < 2.0 || newMoonData.age > 28.0)
+
+        // Sep 18, 2024 is Full Moon -> age should be near 14.8 days
+        val fullMoonData = repository.getMoonData(LocalDateTime(2024, 9, 18, 12, 0), mockLocation)
+        assertTrue("Full Moon age should be between 13.0 and 16.5 days, was ${fullMoonData.age}", fullMoonData.age in 13.0..16.5)
+    }
 }

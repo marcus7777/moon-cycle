@@ -292,7 +292,7 @@ class AstronomyRepositoryImpl : AstronomyRepository {
     }
 
     private fun calculateMoonAge(phaseAngle: Double): Double {
-        var normalized = (phaseAngle + 180.0) / 360.0
+        var normalized = (phaseAngle % 360.0) / 360.0
         while (normalized < 0) normalized += 1.0
         while (normalized >= 1) normalized -= 1.0
         
