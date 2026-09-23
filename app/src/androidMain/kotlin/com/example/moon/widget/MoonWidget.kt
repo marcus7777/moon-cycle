@@ -8,7 +8,6 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.LocalSize
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -22,56 +21,15 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.example.moon.MainActivity
-import com.example.moon.core.data.provider.MoonDataProviderImpl
-import com.example.moon.core.data.repository.AstronomyRepositoryImpl
-import com.example.moon.core.data.repository.LocationRepositoryImpl
-import com.example.moon.core.domain.model.LocationData
-import com.example.moon.util.MoonBitmapRenderer
-import com.google.android.gms.location.LocationServices
 import kotlin.math.roundToInt
 
 class MoonWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val locationRepository = LocationRepositoryImpl(
-            context,
-            LocationServices.getFusedLocationProviderClient(context)
-        )
-        val astronomyRepository = AstronomyRepositoryImpl()
-        val moonDataProvider = MoonDataProviderImpl(locationRepository, astronomyRepository)
-
-        val moonData = try {
-            moonDataProvider.getMoonData()
-        } catch (_: Exception) {
-            null
-        }
-
-        val location = try {
-            locationRepository.getCurrentLocation()
-        } catch (_: Exception) {
-            LocationData(51.5074, -0.1278) // Default London
-        }
+        val widgetData = WidgetHelper.loadWidgetData(context)
 
         provideContent {
-            val size = LocalSize.current
-            val density = context.resources.displayMetrics.density
-
-            val moonBitmap = androidx.compose.runtime.remember(size, moonData) {
-                if (moonData != null) {
-                    val widthPx = (size.width.value * density).toInt()
-                    val heightPx = (size.height.value * density).toInt()
-
-                    if (widthPx > 0 && heightPx > 0) {
-                        MoonBitmapRenderer.renderMoon(
-                            context = context,
-                            moonData = moonData,
-                            location = location,
-                            width = widthPx,
-                            height = heightPx
-                        )
-                    } else null
-                } else null
-            }
+            val moonBitmap = WidgetHelper.rememberMoonBitmap(context, widgetData)
 
             GlanceTheme {
                 Box(
@@ -87,7 +45,7 @@ class MoonWidget : GlanceAppWidget() {
                             modifier = GlanceModifier.fillMaxSize(),
                             contentScale = ContentScale.Fit
                         )
-                        moonData?.let { data ->
+                        widgetData.moonData?.let { data ->
                             Box(
                                 modifier = GlanceModifier
                                     .fillMaxSize()
@@ -118,5 +76,3 @@ class MoonWidget : GlanceAppWidget() {
         }
     }
 }
-
-typealias MoonWidget2x2 = MoonWidget

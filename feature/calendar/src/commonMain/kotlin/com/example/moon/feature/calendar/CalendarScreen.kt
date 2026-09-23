@@ -104,12 +104,7 @@ fun CalendarScreen(
             if (isEditing) {
                 val currentNote = uiState.notes[selectedDate] ?: ""
                 val currentPrompt = remember(selectedDate, uiState.dailyMoonData) {
-                    val moonData = uiState.dailyMoonData[selectedDate]
-                    if (moonData != null) {
-                        IfsPromptProvider.getPromptForAge(moonData.age)
-                    } else {
-                        IfsPromptProvider.getPromptForDayOfMonth(selectedDate.dayOfMonth)
-                    }
+                    IfsPromptProvider.getPrompt(selectedDate, uiState.dailyMoonData)
                 }
                 Column(
                     modifier = Modifier
@@ -466,12 +461,7 @@ fun EventList(
     val dayEvents = events.filter { it.dateTime.date == selectedDate }
     val currentNote = notes[selectedDate] ?: ""
     val currentPrompt = remember(selectedDate, dailyMoonData) {
-        val moonData = dailyMoonData[selectedDate]
-        if (moonData != null) {
-            IfsPromptProvider.getPromptForAge(moonData.age)
-        } else {
-            IfsPromptProvider.getPromptForDayOfMonth(selectedDate.dayOfMonth)
-        }
+        IfsPromptProvider.getPrompt(selectedDate, dailyMoonData)
     }
     
     LazyColumn(

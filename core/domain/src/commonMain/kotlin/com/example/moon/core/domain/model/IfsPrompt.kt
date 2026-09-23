@@ -151,4 +151,13 @@ object IfsPromptProvider {
         val index = ((dayOfMonth - 1) % prompts.size + prompts.size) % prompts.size
         return prompts[index]
     }
+
+    fun getPrompt(date: kotlinx.datetime.LocalDate, dailyMoonData: Map<kotlinx.datetime.LocalDate, MoonData>): IfsPrompt {
+        val moonData = dailyMoonData[date]
+        return if (moonData != null) {
+            getPromptForAge(moonData.age)
+        } else {
+            getPromptForDayOfMonth(date.dayOfMonth)
+        }
+    }
 }

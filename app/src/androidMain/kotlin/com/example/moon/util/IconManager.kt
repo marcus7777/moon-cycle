@@ -7,26 +7,28 @@ import com.example.moon.core.domain.model.MoonPhase
 
 object IconManager {
 
+    private const val MAIN_ACTIVITY = "com.example.moon.MainActivity"
+
     private val phaseToAliasN = mapOf(
-        MoonPhase.NEW to "com.example.moon.MainActivityNewMoon",
-        MoonPhase.WAXING_CRESCENT to "com.example.moon.MainActivityWaxingCrescent",
-        MoonPhase.FIRST_QUARTER to "com.example.moon.MainActivityFirstQuarter",
-        MoonPhase.WAXING_GIBBOUS to "com.example.moon.MainActivityWaxingGibbous",
-        MoonPhase.FULL to "com.example.moon.MainActivity",
-        MoonPhase.WANING_GIBBOUS to "com.example.moon.MainActivityWaningGibbous",
-        MoonPhase.LAST_QUARTER to "com.example.moon.MainActivityLastQuarter",
-        MoonPhase.WANING_CRESCENT to "com.example.moon.MainActivityWaningCrescent"
+        MoonPhase.NEW to "${MAIN_ACTIVITY}NewMoon",
+        MoonPhase.WAXING_CRESCENT to "${MAIN_ACTIVITY}WaxingCrescent",
+        MoonPhase.FIRST_QUARTER to "${MAIN_ACTIVITY}FirstQuarter",
+        MoonPhase.WAXING_GIBBOUS to "${MAIN_ACTIVITY}WaxingGibbous",
+        MoonPhase.FULL to MAIN_ACTIVITY,
+        MoonPhase.WANING_GIBBOUS to "${MAIN_ACTIVITY}WaningGibbous",
+        MoonPhase.LAST_QUARTER to "${MAIN_ACTIVITY}LastQuarter",
+        MoonPhase.WANING_CRESCENT to "${MAIN_ACTIVITY}WaningCrescent"
     )
 
     private val phaseToAliasS = mapOf(
-        MoonPhase.NEW to "com.example.moon.MainActivityNewMoonS",
-        MoonPhase.WAXING_CRESCENT to "com.example.moon.MainActivityWaxingCrescentS",
-        MoonPhase.FIRST_QUARTER to "com.example.moon.MainActivityFirstQuarterS",
-        MoonPhase.WAXING_GIBBOUS to "com.example.moon.MainActivityWaxingGibbousS",
-        MoonPhase.FULL to "com.example.moon.MainActivityFullMoonS",
-        MoonPhase.WANING_GIBBOUS to "com.example.moon.MainActivityWaningGibbousS",
-        MoonPhase.LAST_QUARTER to "com.example.moon.MainActivityLastQuarterS",
-        MoonPhase.WANING_CRESCENT to "com.example.moon.MainActivityWaningCrescentS"
+        MoonPhase.NEW to "${MAIN_ACTIVITY}NewMoonS",
+        MoonPhase.WAXING_CRESCENT to "${MAIN_ACTIVITY}WaxingCrescentS",
+        MoonPhase.FIRST_QUARTER to "${MAIN_ACTIVITY}FirstQuarterS",
+        MoonPhase.WAXING_GIBBOUS to "${MAIN_ACTIVITY}WaxingGibbousS",
+        MoonPhase.FULL to "${MAIN_ACTIVITY}FullMoonS",
+        MoonPhase.WANING_GIBBOUS to "${MAIN_ACTIVITY}WaningGibbousS",
+        MoonPhase.LAST_QUARTER to "${MAIN_ACTIVITY}LastQuarterS",
+        MoonPhase.WANING_CRESCENT to "${MAIN_ACTIVITY}WaningCrescentS"
     )
 
     fun updateIconForPhase(context: Context, currentPhase: MoonPhase, latitude: Double) {
@@ -36,17 +38,16 @@ object IconManager {
 
         try {
             val packageManager = context.packageManager
-            val mainActivityName = "com.example.moon.MainActivity"
             val targetComponentName = ComponentName(context.packageName, targetAlias)
 
             val targetState = packageManager.getComponentEnabledSetting(targetComponentName)
-            val isTargetEnabled = if (targetAlias == mainActivityName) {
+            val isTargetEnabled = if (targetAlias == MAIN_ACTIVITY) {
                 (targetState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) || (targetState == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)
             } else {
                 targetState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
             }
 
-            val allAliases = (phaseToAliasN.values + phaseToAliasS.values).filter { it != mainActivityName }
+            val allAliases = (phaseToAliasN.values + phaseToAliasS.values).filter { it != MAIN_ACTIVITY }
             val aliasesToDisable = allAliases.filter { alias ->
                 alias != targetAlias && packageManager.getComponentEnabledSetting(ComponentName(context.packageName, alias)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
             }
@@ -55,7 +56,7 @@ object IconManager {
                 return
             }
 
-            val mainComponentName = ComponentName(context.packageName, mainActivityName)
+            val mainComponentName = ComponentName(context.packageName, MAIN_ACTIVITY)
             if (packageManager.getComponentEnabledSetting(mainComponentName) != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
                 packageManager.setComponentEnabledSetting(
                     mainComponentName,
@@ -64,7 +65,7 @@ object IconManager {
                 )
             }
 
-            if (targetAlias != mainActivityName && !isTargetEnabled) {
+            if (targetAlias != MAIN_ACTIVITY && !isTargetEnabled) {
                 packageManager.setComponentEnabledSetting(
                     targetComponentName,
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
