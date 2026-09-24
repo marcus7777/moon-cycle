@@ -86,9 +86,11 @@ class NoteRepositoryImpl(context: Context) : NoteRepository {
     }
 
     override suspend fun importJsonlData(jsonlText: String): Boolean {
+        if (jsonlText.isBlank()) return false
         try {
             val lines = jsonlText.split("\n").filter { it.isNotBlank() }
             val importedEntries = lines.mapNotNull { decodeNoteEntry(it) }
+            if (importedEntries.isEmpty()) return false
             
             val editor = prefs.edit()
             editor.clear()
@@ -101,7 +103,7 @@ class NoteRepositoryImpl(context: Context) : NoteRepository {
             _fullNotes.value = importedEntries
             updateNotesMap()
             return true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return false
         }
     }

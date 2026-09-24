@@ -17,6 +17,7 @@ import com.example.moon.data.manager.AndroidWallpaperManager
 import com.example.moon.core.data.repository.AstronomyRepositoryImpl
 import com.example.moon.core.data.repository.LocationRepositoryImpl
 import com.example.moon.core.data.repository.NoteRepositoryImpl
+import com.example.moon.core.data.storage.AndroidFullMoonOffsetStorage
 import com.example.moon.core.data.provider.MoonDataProviderImpl
 import com.example.moon.feature.navigation.MoonNavigation
 import com.example.moon.core.ui.theme.MoonCycleTheme
@@ -62,7 +63,7 @@ class MainActivity : ComponentActivity() {
             this,
             LocationServices.getFusedLocationProviderClient(this)
         )
-        val astronomyRepository = AstronomyRepositoryImpl()
+        val astronomyRepository = AstronomyRepositoryImpl(AndroidFullMoonOffsetStorage(this))
         val moonDataProvider = MoonDataProviderImpl(locationRepository, astronomyRepository)
         val wallpaperManager = AndroidWallpaperManager(this)
         val noteRepository = NoteRepositoryImpl(this)
@@ -102,27 +103,37 @@ class MainActivity : ComponentActivity() {
             val openFileLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                 androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
             ) { uri ->
-                uri?.let {
-                    context.contentResolver.openInputStream(it)?.use { stream ->
-                        val content = stream.bufferedReader().readText()
-                        onFileReadCallback?.invoke(content)
+                val callback = onFileReadCallback
+                onFileReadCallback = null
+                if (uri != null) {
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            val content = stream.bufferedReader().readText()
+                            callback?.invoke(content)
+                        } ?: callback?.invoke("")
+                    } catch (_: Exception) {
+                        callback?.invoke("")
                     }
+                } else {
+                    callback?.invoke("")
                 }
             }
             
             var fileContentToSave by remember { mutableStateOf<String?>(null) }
             val saveFileLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
+                androidx.activity.result.contract.ActivityResultContracts.CreateDocument("*/*")
             ) { uri ->
                 uri?.let {
-                    context.contentResolver.openOutputStream(it)?.use { stream ->
-                        val content = fileContentToSave
-                        if (content != null) {
-                            stream.bufferedWriter().use { writer ->
-                                writer.write(content)
+                    try {
+                        context.contentResolver.openOutputStream(it)?.use { stream ->
+                            val content = fileContentToSave
+                            if (content != null) {
+                                stream.bufferedWriter().use { writer ->
+                                    writer.write(content)
+                                }
                             }
                         }
-                    }
+                    } catch (_: Exception) {}
                 }
             }
 
@@ -148,7 +159,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onUploadFile = { mimeType, onRead ->
                         onFileReadCallback = onRead
-                        openFileLauncher.launch(arrayOf(mimeType))
+                        openFileLauncher.launch(arrayOf("*/*", mimeType, "text/plain", "application/json", "text/calendar"))
                     },
                     onRequestLocationPermission = { onGranted ->
                         onPermissionGrantedCallback = onGranted

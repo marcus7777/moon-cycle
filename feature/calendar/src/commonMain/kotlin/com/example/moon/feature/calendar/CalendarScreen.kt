@@ -15,6 +15,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,8 +48,13 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
     
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-    var selectedDate by remember { mutableStateOf(today) }
-    var isEditing by remember { mutableStateOf(false) }
+    var selectedDate by rememberSaveable(
+        stateSaver = Saver(
+            save = { it.toString() },
+            restore = { LocalDate.parse(it) }
+        )
+    ) { mutableStateOf(today) }
+    var isEditing by rememberSaveable { mutableStateOf(false) }
     
     var isInitialLoad by remember { mutableStateOf(true) }
     

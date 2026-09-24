@@ -41,7 +41,7 @@ class WallpaperWorker(
             context,
             LocationServices.getFusedLocationProviderClient(context)
         )
-        val astronomyRepository = AstronomyRepositoryImpl()
+        val astronomyRepository = AstronomyRepositoryImpl(com.example.moon.core.data.storage.AndroidFullMoonOffsetStorage(context))
 
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val location = locationRepository.getCurrentLocation()

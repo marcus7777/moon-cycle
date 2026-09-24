@@ -1,5 +1,11 @@
 package com.example.moon.core.domain.model
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class IfsPrompt(
     val title: String,
     val prompt: String
@@ -9,7 +15,7 @@ data class IfsPrompt(
 
 object IfsPromptProvider {
 
-    val prompts: List<IfsPrompt> = listOf(
+    val defaultPrompts: List<IfsPrompt> = listOf(
         IfsPrompt(
             "New Moon (Invitation)",
             "The moon rests in darkness again. I wonder—what Part within me is already awake, quietly waiting to be noticed? Can I, from Self, simply say, 'I see you. There’s no rush, no demand—just space. Would you like to walk this cycle with me?'"
@@ -140,16 +146,37 @@ object IfsPromptProvider {
         )
     )
 
+    private val _promptsState = MutableStateFlow(defaultPrompts)
+    val promptsFlow: StateFlow<List<IfsPrompt>> = _promptsState.asStateFlow()
+
+    var prompts: List<IfsPrompt>
+        get() = _promptsState.value
+        set(value) {
+            if (value.isNotEmpty()) {
+                _promptsState.value = value
+            }
+        }
+
+    fun updatePrompts(newPrompts: List<IfsPrompt>) {
+        if (newPrompts.isNotEmpty()) {
+            _promptsState.value = newPrompts
+        }
+    }
+
     fun getPromptForAge(moonAgeDays: Double): IfsPrompt {
+        val current = _promptsState.value
+        if (current.isEmpty()) return defaultPrompts[0]
         val synodicMonthDays = 29.53059
         val normalized = ((moonAgeDays % synodicMonthDays) + synodicMonthDays) % synodicMonthDays / synodicMonthDays
-        val index = (normalized * prompts.size).toInt().coerceIn(0, prompts.size - 1)
-        return prompts[index]
+        val index = (normalized * current.size).toInt().coerceIn(0, current.size - 1)
+        return current[index]
     }
 
     fun getPromptForDayOfMonth(dayOfMonth: Int): IfsPrompt {
-        val index = ((dayOfMonth - 1) % prompts.size + prompts.size) % prompts.size
-        return prompts[index]
+        val current = _promptsState.value
+        if (current.isEmpty()) return defaultPrompts[0]
+        val index = ((dayOfMonth - 1) % current.size + current.size) % current.size
+        return current[index]
     }
 
     fun getPrompt(date: kotlinx.datetime.LocalDate, dailyMoonData: Map<kotlinx.datetime.LocalDate, MoonData>): IfsPrompt {

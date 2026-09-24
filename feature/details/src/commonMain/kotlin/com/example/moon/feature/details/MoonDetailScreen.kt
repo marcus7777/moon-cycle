@@ -14,8 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.moon.core.domain.model.LocationData
+import com.example.moon.core.domain.model.LunarEvent
 import com.example.moon.core.domain.model.MoonData
+import com.example.moon.core.domain.model.formatEventName
 import com.example.moon.core.ui.components.MoonVisualization
+import kotlinx.datetime.LocalDateTime
 
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -37,6 +40,9 @@ fun MoonDetailScreen(
     onSetManualLocation: (Double, Double, String?) -> Unit = { _, _, _ -> },
     onUseDeviceLocation: () -> Unit = {},
     onRequestLocationPermission: (() -> Unit) -> Unit = { _ -> },
+    onSetFullMoonOffset: (Long) -> Unit = {},
+    onClearFullMoonOffset: () -> Unit = {},
+    getClosestFullMoonEvent: () -> LunarEvent? = { null },
     onInteraction: () -> Unit = {},
     modifier: Modifier = Modifier,
     locationData: LocationData = LocationData(latitude = 51.5074, longitude = -0.1278)
@@ -60,6 +66,7 @@ fun MoonDetailScreen(
     var importStatusMessage by remember { mutableStateOf("") }
     var showStatusDialog by remember { mutableStateOf(false) }
     var showLocationDialog by remember { mutableStateOf(false) }
+    var showDriftDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier.fillMaxSize().nestedScroll(nestedScrollConnection),
@@ -152,6 +159,101 @@ fun MoonDetailScreen(
                     }
                     moonData.azimuth?.let {
                         DetailItem("Azimuth", "${formatOneDecimal(it)}°")
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Text(
+                        text = "Lunar Observation & Drift Correction",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Visibility,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFD700),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Grounding Calculation in Reality",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = Color.White
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "As with all things in nature, we need to observe them to stay grounded in reality. We cannot calculate everything and expect it to be reality. Due to complex orbital perturbations and atmospheric factors, calculated full moon times can subtly drift from direct visual observation. Setting the observed Full Moon time grounds our lunar model in real-world observation.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.LightGray
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            val currentOffset = moonData.fullMoonOffsetMinutes
+                            val offsetText = when {
+                                currentOffset == 0L -> "No drift correction applied (Standard Calculation)"
+                                currentOffset > 0 -> "+$currentOffset min correction (Observed Later)"
+                                else -> "$currentOffset min correction (Observed Earlier)"
+                            }
+
+                            Text(
+                                text = "Current Calibration:",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.Gray
+                            )
+                            Text(
+                                text = offsetText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (currentOffset != 0L) Color(0xFF81C784) else Color.White
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = { showDriftDialog = true },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White.copy(alpha = 0.12f),
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Correct Drift", style = MaterialTheme.typography.labelMedium)
+                                }
+
+                                if (currentOffset != 0L) {
+                                    OutlinedButton(
+                                        onClick = onClearFullMoonOffset,
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.LightGray)
+                                    ) {
+                                        Icon(Icons.Rounded.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Reset Drift", style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -336,6 +438,150 @@ fun MoonDetailScreen(
             }
         )
     }
+
+    if (showDriftDialog && moonData != null) {
+        FullMoonCorrectionDialog(
+            currentOffsetMinutes = moonData.fullMoonOffsetMinutes,
+            closestFullMoonEvent = remember(moonData) { getClosestFullMoonEvent() },
+            onDismiss = { showDriftDialog = false },
+            onApplyOffsetMinutes = { newOffset ->
+                onSetFullMoonOffset(newOffset)
+                showDriftDialog = false
+            },
+            onResetOffset = {
+                onClearFullMoonOffset()
+                showDriftDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun FullMoonCorrectionDialog(
+    currentOffsetMinutes: Long,
+    closestFullMoonEvent: LunarEvent?,
+    onDismiss: () -> Unit,
+    onApplyOffsetMinutes: (Long) -> Unit,
+    onResetOffset: () -> Unit
+) {
+    var tempOffsetMinutes by remember { mutableStateOf(currentOffsetMinutes) }
+
+    val baseTime = closestFullMoonEvent?.dateTime
+    val baseTimeStr = if (baseTime != null) {
+        "${baseTime.year}-${baseTime.monthNumber.toString().padStart(2, '0')}-${baseTime.dayOfMonth.toString().padStart(2, '0')} ${baseTime.hour.toString().padStart(2, '0')}:${baseTime.minute.toString().padStart(2, '0')}"
+    } else {
+        "Nearest Full Moon"
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1A1A1A),
+        titleContentColor = Color.White,
+        textContentColor = Color.LightGray,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Tune, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Correct Full Moon Drift")
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Adjust the Full Moon prediction time to match direct visual observation.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.LightGray
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Reference Full Moon (Calculated):", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        Text(baseTimeStr, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text("Drift Correction Offset:", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        Text(
+                            text = if (tempOffsetMinutes == 0L) "0 minutes (Standard)" else if (tempOffsetMinutes > 0) "+$tempOffsetMinutes minutes" else "$tempOffsetMinutes minutes",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (tempOffsetMinutes != 0L) Color(0xFF81C784) else Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Quick Offset Adjustments:", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    listOf(-60L, -15L, -5L, +5L, +15L, +60L).forEach { delta ->
+                        Button(
+                            onClick = { tempOffsetMinutes += delta },
+                            modifier = Modifier.weight(1f).height(36.dp),
+                            contentPadding = PaddingValues(horizontal = 2.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White.copy(alpha = 0.12f),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                text = if (delta > 0) "+${delta}m" else "${delta}m",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Fine Tuning:", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { tempOffsetMinutes -= 1 }) {
+                            Icon(Icons.Rounded.Remove, contentDescription = "-1m", tint = Color.White)
+                        }
+                        Text("$tempOffsetMinutes m", style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                        IconButton(onClick = { tempOffsetMinutes += 1 }) {
+                            Icon(Icons.Rounded.Add, contentDescription = "+1m", tint = Color.White)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onApplyOffsetMinutes(tempOffsetMinutes)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
+            ) {
+                Text("Apply Correction")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onResetOffset()
+                },
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+            ) {
+                Text("Reset (0m)")
+            }
+        }
+    )
 }
 
 @Composable

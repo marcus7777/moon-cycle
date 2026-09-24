@@ -11,7 +11,12 @@ import com.example.moon.core.domain.repository.NoteRepository
 import com.example.moon.core.domain.manager.WallpaperManager
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 class MoonDetailViewModel(
     private val locationRepository: LocationRepository,
@@ -40,6 +45,39 @@ class MoonDetailViewModel(
 
     fun useDeviceLocation() {
         locationRepository.clearManualLocation()
+    }
+
+    val fullMoonOffsetMinutes: StateFlow<Long> = astronomyRepository.fullMoonOffsetMinutes
+
+    fun setFullMoonOffsetMinutes(minutes: Long) {
+        astronomyRepository.setFullMoonOffsetMinutes(minutes)
+    }
+
+    fun setObservedFullMoonTime(observedTime: LocalDateTime, locationData: LocationData) {
+        astronomyRepository.setObservedFullMoonTime(observedTime, locationData)
+    }
+
+    fun clearFullMoonOffset() {
+        astronomyRepository.clearFullMoonOffset()
+    }
+
+    fun getClosestFullMoonEvent(locationData: LocationData): com.example.moon.core.domain.model.LunarEvent? {
+        val now = kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+        val next = astronomyRepository.findNextEvent(com.example.moon.core.domain.model.EventType.FULL_MOON, now, locationData)
+        val prev = astronomyRepository.findPreviousEvent(com.example.moon.core.domain.model.EventType.FULL_MOON, now, locationData)
+        if (next == null) return prev
+        if (prev == null) return next
+
+        val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
+        val nowMs = now.toInstant(tz).toEpochMilliseconds()
+        val nextMs = next.dateTime.toInstant(tz).toEpochMilliseconds()
+        val prevMs = prev.dateTime.toInstant(tz).toEpochMilliseconds()
+
+        return if (kotlin.math.abs(nextMs - nowMs) < kotlin.math.abs(prevMs - nowMs)) {
+            next
+        } else {
+            prev
+        }
     }
 
     fun exportNotesJsonl(): String {

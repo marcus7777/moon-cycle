@@ -11,5 +11,6 @@ data class MoonData(
     val altitude: Double? = null,
     val azimuth: Double? = null,
     val parallacticAngle: Double? = null,
-    val nextEvent: LunarEvent? = null
+    val nextEvent: LunarEvent? = null,
+    val fullMoonOffsetMinutes: Long = 0L
 )

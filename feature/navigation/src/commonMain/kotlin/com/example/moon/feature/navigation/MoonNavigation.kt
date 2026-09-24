@@ -3,6 +3,7 @@ package com.example.moon.feature.navigation
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -31,7 +32,7 @@ fun MoonNavigation(
     onUploadFile: (mimeType: String, onRead: (String) -> Unit) -> Unit = { _, _ -> },
     onRequestLocationPermission: (() -> Unit) -> Unit = { _ -> }
 ) {
-    var currentOverlay by remember { mutableStateOf<Overlay?>(null) }
+    var currentOverlay by rememberSaveable { mutableStateOf<Overlay?>(null) }
     var navigationAlpha by remember { mutableStateOf(1f) }
     var idleJob by remember { mutableStateOf<Job?>(null) }
     var fadeJob by remember { mutableStateOf<Job?>(null) }
@@ -85,7 +86,7 @@ fun MoonNavigation(
         )
 
         AnimatedVisibility(
-            visible = currentOverlay is Overlay.Calendar,
+            visible = currentOverlay == Overlay.Calendar,
             enter = slideInVertically { it },
             exit = if (navigationAlpha == 0f) ExitTransition.None else slideOutVertically { it }
         ) {
@@ -103,10 +104,12 @@ fun MoonNavigation(
         }
 
         AnimatedVisibility(
-            visible = currentOverlay is Overlay.Details,
+            visible = currentOverlay == Overlay.Details,
             enter = slideInVertically { it },
             exit = if (navigationAlpha == 0f) ExitTransition.None else slideOutVertically { it }
         ) {
+            val fullMoonOffsetMinutes by detailsViewModel.fullMoonOffsetMinutes.collectAsState()
+
             MoonDetailScreen(
                 modifier = Modifier.graphicsLayer { alpha = navigationAlpha },
                 moonData = moonData,
@@ -134,13 +137,16 @@ fun MoonNavigation(
                 onSetManualLocation = { lat, lng, name -> detailsViewModel.setManualLocation(lat, lng, name) },
                 onUseDeviceLocation = { detailsViewModel.useDeviceLocation() },
                 onRequestLocationPermission = onRequestLocationPermission,
+                onSetFullMoonOffset = { minutes -> detailsViewModel.setFullMoonOffsetMinutes(minutes) },
+                onClearFullMoonOffset = { detailsViewModel.clearFullMoonOffset() },
+                getClosestFullMoonEvent = { detailsViewModel.getClosestFullMoonEvent(locationData) },
                 onInteraction = { resetNavigationIdleTimer() }
             )
         }
     }
 }
 
-sealed class Overlay {
-    object Calendar : Overlay()
-    object Details : Overlay()
+enum class Overlay {
+    Calendar,
+    Details
 }

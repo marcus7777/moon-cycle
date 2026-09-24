@@ -62,4 +62,36 @@ class AstronomyRepositoryImplTest {
         val fullMoonData = repository.getMoonData(LocalDateTime(2024, 9, 18, 12, 0), mockLocation)
         assertTrue("Full Moon age should be between 13.0 and 16.5 days, was ${fullMoonData.age}", fullMoonData.age in 13.0..16.5)
     }
+
+    @Test
+    fun driftCorrection_setAndClearOffset() {
+        val testRepo = AstronomyRepositoryImpl()
+        
+        // Default offset is 0
+        assertTrue(testRepo.fullMoonOffsetMinutes.value == 0L)
+        
+        testRepo.setFullMoonOffsetMinutes(30L)
+        assertTrue(testRepo.fullMoonOffsetMinutes.value == 30L)
+        
+        val date = LocalDateTime(2024, 9, 18, 12, 0)
+        val data = testRepo.getMoonData(date, mockLocation)
+        assertTrue(data.fullMoonOffsetMinutes == 30L)
+        
+        testRepo.clearFullMoonOffset()
+        assertTrue(testRepo.fullMoonOffsetMinutes.value == 0L)
+    }
+
+    @Test
+    fun setObservedFullMoonTime_calculatesCorrectOffset() {
+        val testRepo = AstronomyRepositoryImpl()
+        val rawFullMoon = testRepo.findNextEvent(EventType.FULL_MOON, LocalDateTime(2024, 9, 1, 0, 0), mockLocation)
+        assertTrue(rawFullMoon != null)
+        
+        val observedTime = LocalDateTime(2024, 9, 18, 12, 30) // Observed 30 mins later
+        testRepo.setObservedFullMoonTime(observedTime, mockLocation)
+        
+        // Offset should be non-zero
+        val offset = testRepo.fullMoonOffsetMinutes.value
+        assertTrue("Offset should be non-zero after setting observed full moon time", offset != 0L)
+    }
 }

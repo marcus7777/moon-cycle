@@ -6,22 +6,81 @@ import com.example.moon.core.domain.model.LunarEvent
 import com.example.moon.core.domain.model.MoonData
 import com.example.moon.core.domain.model.MoonPhase
 import com.example.moon.core.domain.repository.AstronomyRepository
+import com.example.moon.core.domain.repository.FullMoonOffsetStorage
 import dev.jamesyox.kastro.luna.calculateLunarIllumination
 import dev.jamesyox.kastro.luna.calculateLunarPosition
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import kotlin.math.abs
 import kotlin.time.Instant as KastroInstant
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 private fun kotlinx.datetime.Instant.toKastro(): KastroInstant =
     KastroInstant.fromEpochMilliseconds(toEpochMilliseconds())
 
-class AstronomyRepositoryImpl : AstronomyRepository {
+class AstronomyRepositoryImpl(
+    private val offsetStorage: FullMoonOffsetStorage? = null
+) : AstronomyRepository {
 
-    private var cachedData: Pair<Pair<Long, LocationData>, MoonData>? = null
+    private val _fullMoonOffsetMinutes = MutableStateFlow(offsetStorage?.getOffsetMinutes() ?: 0L)
+    override val fullMoonOffsetMinutes: StateFlow<Long> = _fullMoonOffsetMinutes.asStateFlow()
+
+    private var cachedData: Pair<Triple<Long, Long, LocationData>, MoonData>? = null
+
+    override fun setFullMoonOffsetMinutes(minutes: Long) {
+        _fullMoonOffsetMinutes.value = minutes
+        offsetStorage?.saveOffsetMinutes(minutes)
+        cachedData = null
+    }
+
+    override fun clearFullMoonOffset() {
+        setFullMoonOffsetMinutes(0L)
+    }
+
+    override fun setObservedFullMoonTime(observedTime: LocalDateTime, location: LocationData) {
+        val searchStart = observedTime.toInstant(TimeZone.currentSystemDefault())
+            .minus(15, DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+        
+        val previousOffset = _fullMoonOffsetMinutes.value
+        _fullMoonOffsetMinutes.value = 0L
+        cachedData = null
+
+        val rawNext = findNextEvent(EventType.FULL_MOON, searchStart, location)
+        val rawPrev = findPreviousEvent(EventType.FULL_MOON, searchStart, location)
+        
+        val obsMs = observedTime.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds()
+        val candidate1 = rawNext?.dateTime
+        val candidate2 = rawPrev?.dateTime
+        
+        val closestCalc = listOfNotNull(candidate1, candidate2).minByOrNull { dt ->
+            abs(dt.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds() - obsMs)
+        }
+
+        if (closestCalc != null) {
+            val calcMs = closestCalc.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds()
+            val diffMinutes = (obsMs - calcMs) / 60000L
+            setFullMoonOffsetMinutes(diffMinutes)
+        } else {
+            _fullMoonOffsetMinutes.value = previousOffset
+        }
+    }
+
+    @OptIn(kotlin.time.ExperimentalTime::class)
+    private fun getPhaseAtMs(ms: Long): Double {
+        val offsetMs = _fullMoonOffsetMinutes.value * 60000L
+        val effectiveMs = ms - offsetMs
+        return kotlinx.datetime.Instant.fromEpochMilliseconds(effectiveMs)
+            .toKastro().calculateLunarIllumination().phase
+    }
 
     @OptIn(kotlin.time.ExperimentalTime::class)
     override fun getMoonData(date: LocalDateTime, location: LocationData): MoonData {
@@ -32,14 +91,18 @@ class AstronomyRepositoryImpl : AstronomyRepository {
     private fun getMoonDataInternal(date: LocalDateTime, location: LocationData, includeDetails: Boolean): MoonData {
         val instant = date.toInstant(TimeZone.currentSystemDefault())
         val roundedTimeMs = (instant.toEpochMilliseconds() / 60000) * 60000
+        val currentOffset = _fullMoonOffsetMinutes.value
 
         if (includeDetails) {
             cachedData?.let { (key, data) ->
-                if (key.first == roundedTimeMs && key.second == location) return data
+                if (key.first == roundedTimeMs && key.second == currentOffset && key.third == location) return data
             }
         }
         
-        val illumination = instant.toKastro().calculateLunarIllumination()
+        val offsetMs = currentOffset * 60000L
+        val effectiveInstant = kotlinx.datetime.Instant.fromEpochMilliseconds(instant.toEpochMilliseconds() - offsetMs)
+
+        val illumination = effectiveInstant.toKastro().calculateLunarIllumination()
         val position = instant.toKastro().calculateLunarPosition(location.latitude, location.longitude)
 
         val phase = mapAngleToMoonPhase(illumination.phase)
@@ -56,11 +119,12 @@ class AstronomyRepositoryImpl : AstronomyRepository {
             altitude = position.altitude,
             azimuth = position.azimuth,
             parallacticAngle = position.parallacticAngle,
-            nextEvent = nextEvent
+            nextEvent = nextEvent,
+            fullMoonOffsetMinutes = currentOffset
         )
         
         if (includeDetails) {
-            cachedData = Pair(Pair(roundedTimeMs, location), result)
+            cachedData = Pair(Triple(roundedTimeMs, currentOffset, location), result)
         }
         return result
     }
@@ -97,11 +161,11 @@ class AstronomyRepositoryImpl : AstronomyRepository {
         val endMs = endInstant.toEpochMilliseconds()
         val stepMs = 6 * 60 * 60 * 1000L 
         
-        var prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
+        var prevPhase = getPhaseAtMs(currentMs)
         
         while (currentMs < endMs) {
             val nextMs = currentMs + stepMs
-            val nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(nextMs).toKastro().calculateLunarIllumination().phase
+            val nextPhase = getPhaseAtMs(nextMs)
             
             val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
             if (crossedEvent != null && crossedEvent.dateTime.toInstant(TimeZone.currentSystemDefault()) < endInstant) {
@@ -122,11 +186,11 @@ class AstronomyRepositoryImpl : AstronomyRepository {
         val stepMs = 6 * 60 * 60 * 1000L 
         val maxSteps = (45 * 24) / 6 
         
-        var prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
+        var prevPhase = getPhaseAtMs(currentMs)
         
         for (i in 0 until maxSteps) {
             val nextMs = currentMs + stepMs
-            val nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(nextMs).toKastro().calculateLunarIllumination().phase
+            val nextPhase = getPhaseAtMs(nextMs)
             val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
             
             if (crossedEvent != null && crossedEvent.type == type) {
@@ -144,11 +208,11 @@ class AstronomyRepositoryImpl : AstronomyRepository {
         val stepMs = 6 * 60 * 60 * 1000L 
         val maxSteps = (45 * 24) / 6 
         
-        var nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
+        var nextPhase = getPhaseAtMs(currentMs)
         
         for (i in 0 until maxSteps) {
             val prevMs = currentMs - stepMs
-            val prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(prevMs).toKastro().calculateLunarIllumination().phase
+            val prevPhase = getPhaseAtMs(prevMs)
             val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, prevMs, currentMs)
             
             if (crossedEvent != null && crossedEvent.type == type) {
@@ -222,11 +286,11 @@ class AstronomyRepositoryImpl : AstronomyRepository {
         
         val maxSteps = (45 * 24) / 6 
         
-        var prevPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(currentMs).toKastro().calculateLunarIllumination().phase
+        var prevPhase = getPhaseAtMs(currentMs)
         
         for (i in 0 until maxSteps) {
             val nextMs = currentMs + stepMs
-            val nextPhase = kotlinx.datetime.Instant.fromEpochMilliseconds(nextMs).toKastro().calculateLunarIllumination().phase
+            val nextPhase = getPhaseAtMs(nextMs)
             
             val crossedEvent = checkCrossingAndRefine(prevPhase, nextPhase, currentMs, nextMs)
             if (crossedEvent != null && (crossedEvent.type == EventType.NEW_MOON || crossedEvent.type == EventType.FULL_MOON)) {
@@ -254,7 +318,7 @@ class AstronomyRepositoryImpl : AstronomyRepository {
         var high = t2
         for (i in 0 until 6) { 
             val mid = (low + high) / 2
-            var phase = kotlinx.datetime.Instant.fromEpochMilliseconds(mid).toKastro().calculateLunarIllumination().phase
+            var phase = getPhaseAtMs(mid)
             if (target == 360.0 && phase < 180.0) phase += 360.0 
             
             if (phase < target) low = mid else high = mid

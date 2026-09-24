@@ -6,8 +6,8 @@ import com.example.moon.core.domain.repository.AstronomyRepository
 import com.example.moon.core.domain.repository.LocationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDateTime
@@ -20,7 +20,10 @@ class MoonDataProviderImpl(
 ) : MoonDataProvider {
 
     override fun getMoonDataFlow(): Flow<MoonData> {
-        return locationRepository.getLocationUpdates().map { location ->
+        return combine(
+            locationRepository.getLocationUpdates(),
+            astronomyRepository.fullMoonOffsetMinutes
+        ) { location, _ ->
             astronomyRepository.getMoonData(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()), location)
         }.flowOn(Dispatchers.Default)
     }

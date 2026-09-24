@@ -25,7 +25,7 @@ object WidgetHelper {
             context,
             LocationServices.getFusedLocationProviderClient(context)
         )
-        val astronomyRepository = AstronomyRepositoryImpl()
+        val astronomyRepository = AstronomyRepositoryImpl(com.example.moon.core.data.storage.AndroidFullMoonOffsetStorage(context))
         val moonDataProvider = MoonDataProviderImpl(locationRepository, astronomyRepository)
 
         val moonData = try {

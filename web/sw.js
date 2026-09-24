@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moon-cycle-v1';
+const CACHE_NAME = 'moon-cycle-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   './astronomy.js',
   './moonRenderer.js',
   './app.js',
+  './prompts.json',
   './manifest.json'
 ];
 
