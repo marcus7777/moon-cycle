@@ -110,7 +110,8 @@ fun CalendarScreen(
         ) {
             if (isEditing) {
                 val currentNote = uiState.notes[selectedDate] ?: ""
-                val currentPrompt = remember(selectedDate, uiState.dailyMoonData) {
+                val prompts by IfsPromptProvider.promptsFlow.collectAsState()
+                val currentPrompt = remember(selectedDate, uiState.dailyMoonData, prompts) {
                     IfsPromptProvider.getPrompt(selectedDate, uiState.dailyMoonData)
                 }
                 Column(
@@ -467,7 +468,8 @@ fun EventList(
 ) {
     val dayEvents = events.filter { it.dateTime.date == selectedDate }
     val currentNote = notes[selectedDate] ?: ""
-    val currentPrompt = remember(selectedDate, dailyMoonData) {
+    val prompts by IfsPromptProvider.promptsFlow.collectAsState()
+    val currentPrompt = remember(selectedDate, dailyMoonData, prompts) {
         IfsPromptProvider.getPrompt(selectedDate, dailyMoonData)
     }
     

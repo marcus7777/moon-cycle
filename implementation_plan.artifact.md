@@ -1,54 +1,63 @@
-# Implementation Plan - Refactor to Kotlin Multiplatform (KMP)
+# Move Web Prompts to JSON & Sync Remote Prompts to Android / Wear OS
 
-Refactor the Moon Cycle project into a Kotlin Multiplatform structure to support Android and Web (Wasm) targets.
+This plan extracts the IFS lunar prompts into a standalone `prompts.json` file in the web version (`web/prompts.json`) hosted at `https://moon-is.web.app/prompts.json`. It also adds a remote prompt checker mechanism to the Android phone app (`:app`) and Wear OS app (`:wear`) so that updated prompts are checked on startup, cached locally, and propagated throughout the apps.
 
 ## Proposed Changes
 
-### Build Configuration
+### Web Application (`web/`)
 
-#### [MODIFY] [libs.versions.toml](file:///C:/Users/marcu/AndroidStudioProjects/moon/gradle/libs.versions.toml)
-- Add `compose-multiplatform` plugin version (1.12.0).
-- Add `kotlin-multiplatform` plugin.
-- Add `compose-multiplatform` to plugins.
+#### [NEW] [prompts.json](file:///C:/Users/marcu/AndroidStudioProjects/moon/web/prompts.json)
+- Extract the 32 IFS lunar prompts into a formatted JSON file with versioning and title/prompt attributes.
 
-#### [MODIFY] [build.gradle.kts (root)](file:///C:/Users/marcu/AndroidStudioProjects/moon/build.gradle.kts)
-- Apply `kotlin("multiplatform")` and `org.jetbrains.compose` plugins as `apply false`.
+#### [MODIFY] [app.js](file:///C:/Users/marcu/AndroidStudioProjects/moon/web/app.js)
+- Replace the hardcoded `IFS_PROMPTS` array with `loadPrompts()` which fetches `./prompts.json`.
+- Trigger `loadPrompts()` during application initialization (`init()`).
 
-#### [MODIFY] [build.gradle.kts (app)](file:///C:/Users/marcu/AndroidStudioProjects/moon/app/build.gradle.kts)
-- Apply `kotlin("multiplatform")` and `org.jetbrains.compose` plugins.
-- Configure `androidTarget()`.
-- Configure `wasmJs()`.
-- Define source sets (`commonMain`, `androidMain`, `wasmJsMain`).
-- Move dependencies to appropriate source sets.
+#### [MODIFY] [sw.js](file:///C:/Users/marcu/AndroidStudioProjects/moon/web/sw.js)
+- Add `'./prompts.json'` to the Service Worker's precached `ASSETS` array for offline web functionality.
 
-### UI & Logic Migration
+---
 
-#### [NEW] [LocationProvider.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/app/src/commonMain/kotlin/com/example/moon/data/location/LocationProvider.kt)
-- Define `expect class LocationProvider`.
+### Core Domain Module (`:core:domain`)
 
-#### [NEW] [LocationProvider.android.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/app/src/androidMain/kotlin/com/example/moon/data/location/LocationProvider.kt)
-- Implement `actual class LocationProvider` using `FusedLocationProviderClient`.
+#### [MODIFY] [IfsPrompt.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/core/domain/src/commonMain/kotlin/com/example/moon/core/domain/model/IfsPrompt.kt)
+- Update `IfsPromptProvider` object to maintain dynamic state using a `StateFlow<List<IfsPrompt>>`.
+- Expose `updatePrompts()` to update the active prompt list at runtime.
 
-#### [NEW] [LocationProvider.wasmJs.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/app/src/wasmJsMain/kotlin/com/example/moon/data/location/LocationProvider.kt)
-- Implement `actual class LocationProvider` (stub or navigator.geolocation).
+#### [NEW] [PromptRepository.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/core/domain/src/commonMain/kotlin/com/example/moon/core/domain/repository/PromptRepository.kt)
+- Define `PromptRepository` interface with `loadCachedPrompts()` and `checkAndUpdatePrompts(): Boolean`.
 
-#### [MOVE] Source code to `commonMain`
-- Move domain, data (AstronomyRepository), and UI (Screens, Components, ViewModels) to `commonMain`.
-- Update imports if necessary (though Compose Multiplatform uses `androidx.compose` package names).
+---
 
-### Target Support
+### Core Data Module (`:core:data`)
 
-#### [NEW] [index.html](file:///C:/Users/marcu/AndroidStudioProjects/moon/app/src/wasmJsMain/resources/index.html)
-- Basic HTML entry point for Wasm target.
+#### [NEW] [PromptRepositoryImpl.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/core/data/src/androidMain/kotlin/com/example/moon/core/data/repository/PromptRepositoryImpl.kt)
+- Implement `PromptRepository` using `SharedPreferences` for local disk caching and `HttpURLConnection` on `Dispatchers.IO` to fetch from `https://moon-is.web.app/prompts.json`.
+- Parse fetched JSON, save to disk, and update `IfsPromptProvider`.
 
-#### [NEW] [main.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/app/src/wasmJsMain/kotlin/main.kt)
-- Entry point for Compose Wasm.
+---
+
+### Feature Calendar Module (`:feature:calendar`)
+
+#### [MODIFY] [CalendarScreen.kt](file:///C:/Users/marcu/AndroidStudioProjects/moon/feature/calendar/src/commonMain/kotlin/com/example/moon/feature/calendar/CalendarScreen.kt)
+- Collect `IfsPromptProvider.promptsFlow` in Compose so prompts automatically recompose when updated prompts are loaded.
+
+---
+
+### App & Wear OS Modules (`:app` & `:wear`)
+
+#### [MODIFY] [MainActivity.kt (Phone)](file:///C:/Users/marcu/AndroidStudioProjects/moon/app/src/androidMain/kotlin/com/example/moon/MainActivity.kt)
+- Instantiate `PromptRepositoryImpl`, load cached prompts on boot, and launch a background coroutine to fetch remote prompt updates.
+
+#### [MODIFY] [MainActivity.kt (Wear OS)](file:///C:/Users/marcu/AndroidStudioProjects/moon/wear/src/main/java/com/example/moon/wear/MainActivity.kt)
+- Instantiate `PromptRepositoryImpl`, load cached prompts on boot, and launch a background coroutine to fetch remote prompt updates.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `./gradlew :app:assembleDebug` to verify Android build.
-- Run `./gradlew :app:compileKotlinWasmJs` to verify Wasm compilation.
+### Automated Build & Compilation
+- Run `./gradlew assembleDebug` to verify all Kotlin modules compile cleanly.
+- Run Gradle unit tests to ensure no regressions.
 
 ### Manual Verification
-- Verify that the app still runs on Android and the UI is intact.
+- Verify `web/prompts.json` loads correctly in `web/app.js`.
+- Verify Android phone app and Wear OS app fetch and load prompts correctly.

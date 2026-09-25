@@ -17,6 +17,7 @@ import com.example.moon.data.manager.AndroidWallpaperManager
 import com.example.moon.core.data.repository.AstronomyRepositoryImpl
 import com.example.moon.core.data.repository.LocationRepositoryImpl
 import com.example.moon.core.data.repository.NoteRepositoryImpl
+import com.example.moon.core.data.repository.PromptRepositoryImpl
 import com.example.moon.core.data.storage.AndroidFullMoonOffsetStorage
 import com.example.moon.core.data.provider.MoonDataProviderImpl
 import com.example.moon.feature.navigation.MoonNavigation
@@ -67,9 +68,14 @@ class MainActivity : ComponentActivity() {
         val moonDataProvider = MoonDataProviderImpl(locationRepository, astronomyRepository)
         val wallpaperManager = AndroidWallpaperManager(this)
         val noteRepository = NoteRepositoryImpl(this)
+        val promptRepository = PromptRepositoryImpl(this)
+        promptRepository.loadCachedPrompts()
         
         // Update icon and mark app as ready
         MainScope().launch {
+            launch {
+                promptRepository.checkAndUpdatePrompts()
+            }
             try {
                 // 1. Get initial location quickly with timeout/fallback to unblock splash screen
                 val initialLocation = locationRepository.getCurrentLocation()
